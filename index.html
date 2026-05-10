@@ -552,12 +552,16 @@ const ASSET = {
   bg_ward:    "assets/bg_ward.png",
   bg_break:   "assets/bg_breakroom.png",
   bg_sat:     "assets/bg_saturday.png",
-  // ナナミ立ち絵: 場所に応じて私服 / ナース服を切替
-  nanami_casual:       "assets/nanami_casual.png",
-  nanami_casual_tired: "assets/nanami_casual_tired.png",
-  nanami_nurse:        "assets/nanami_nurse.png",
-  nanami_nurse_tired:  "assets/nanami_nurse_tired.png",
-  nurse_sleep:         "assets/nanami_pajama_sleep.png"
+  nurse_sleep:"assets/nanami_pajama_sleep.png"
+};
+// たまごっち式: 4フレームを600msごとに循環 + 場所別衣装
+const NANAMI_FRAMES = {
+  casual: ["assets/nanami_casual_0.png","assets/nanami_casual_1.png","assets/nanami_casual_2.png","assets/nanami_casual_3.png"],
+  nurse:  ["assets/nanami_nurse_0.png", "assets/nanami_nurse_1.png", "assets/nanami_nurse_2.png", "assets/nanami_nurse_3.png"]
+};
+const NANAMI_TIRED = {
+  casual: "assets/nanami_casual_tired.png",
+  nurse:  "assets/nanami_nurse_tired.png"
 };
 // NPCスプライト (1フレーム抽出済の単独PNG)
 const NPC_SHEETS = {
@@ -663,7 +667,7 @@ const ACTIONS = {
     effects: "💖+22"
   },
   commute: {
-    label: "出勤", icon: "🚆", places: ["home","road"], move: "ward",
+    label: "出勤", icon: "🚶", places: ["home","road"], move: "ward",
     cooldown: 3000, delta: { stamina: -3, mental: -2, focus: 0 },
     line: "玄関の鍵を回した。空気が、肺より先に目を覚まさせる。",
     cdLines: ["駅、過ぎた"],
@@ -1117,15 +1121,18 @@ function render() {
     img.src = ASSET[bgKey];
   }
 
-  // Nurse sprite — napping=寝姿 / 病棟=ナース服 / 寮・道=私服 (疲れ姿あり)
+  // Nurse sprite — napping=寝姿 / 病棟=ナース服 / 寮・道=私服 + たまごっち式4フレーム循環
   const tired = state.stamina <= 35 || state.mental <= 35;
   let nurseSrc;
   if (state.napping) {
     nurseSrc = ASSET.nurse_sleep;
-  } else if (state.place === "ward") {
-    nurseSrc = tired ? ASSET.nanami_nurse_tired : ASSET.nanami_nurse;
   } else {
-    nurseSrc = tired ? ASSET.nanami_casual_tired : ASSET.nanami_casual;
+    const outfit = (state.place === "ward") ? "nurse" : "casual";
+    if (tired) {
+      nurseSrc = NANAMI_TIRED[outfit];
+    } else {
+      nurseSrc = NANAMI_FRAMES[outfit][_nanamiFrameIdx];
+    }
   }
   setNurse(nurseSrc);
 
@@ -1524,14 +1531,17 @@ function tick() {
     const h = gameHour();
     if (h >= 17 && h < 22) {
       state.lastVisitDay = state.day;
-      // 訪問者は CONVERSATION_BURSTS から日替わりで rotate
-      const visitor = CONVERSATION_BURSTS[state.day % CONVERSATION_BURSTS.length];
-      _burstQueue = [...visitor];
+      state.playedBursts = state.playedBursts || [];
+      // 未再生から優先選択、なければ何でもOK
+      let remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => !state.playedBursts.includes(i));
+      const idx = remaining.length ? pick(remaining) : (state.day % CONVERSATION_BURSTS.length);
+      state.playedBursts.push(idx);
+      _burstQueue = [...CONVERSATION_BURSTS[idx]];
       state.inConversation = true;
       $("frame").classList.add("in-convo");
       sfx("conv");
       playNextBurst();
-      return; // この tick は訪問発火だけで終了
+      return;
     }
   }
 
@@ -1637,7 +1647,16 @@ function firePenalty(id) {
 let _burstQueue = null;
 function spawnConversation() {
   if (_burstQueue) return;
-  _burstQueue = [...pick(CONVERSATION_BURSTS)];
+  state.playedBursts = state.playedBursts || [];
+  // 未再生のbustを優先。全部再生済なら履歴クリア
+  let remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => !state.playedBursts.includes(i));
+  if (remaining.length === 0) {
+    state.playedBursts = [];
+    remaining = CONVERSATION_BURSTS.map((b,i) => i);
+  }
+  const idx = pick(remaining);
+  state.playedBursts.push(idx);
+  _burstQueue = [...CONVERSATION_BURSTS[idx]];
   state.inConversation = true;
   $("frame").classList.add("in-convo");
   sfx("conv");
@@ -1860,6 +1879,7 @@ function newGame() {
     nextDecisionMs: Date.now() + 15000,
     today: { shift:0, decision:0, nightmare:0 },
     lastVisitDay: -1,
+    playedBursts: [],
     hardMode: state.hardMode || false,
     ended: false,
     paused: false,
@@ -1919,6 +1939,15 @@ $("btn-victory-close").addEventListener("click", () => {
   newGame();
 });
 
+// ===== たまごっち式 4フレーム循環 =====
+let _nanamiFrameIdx = 0;
+function nanamiFrameTick() {
+  if (state.ended || state.paused || state.napping) return;
+  if (state.inConversation || state.decision) return;
+  _nanamiFrameIdx = (_nanamiFrameIdx + 1) % 4;
+  render();
+}
+
 // ===== たまごっち式 うろうろ =====
 let _wanderInterval = null;
 function wanderTick() {
@@ -1959,6 +1988,7 @@ render();
 
 // Tick loop
 setInterval(tick, TICK_MS);
+setInterval(nanamiFrameTick, 600); // たまごっち式4フレーム
 startWander();
 
 // テスト: #play / #testwin / #testlose / #testconvo / #testsleep / #testmove
