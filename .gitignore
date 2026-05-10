@@ -44,3 +44,8 @@ assets/cleaned_私服.png
 # 未使用ポートレート
 assets/portrait_head_nurse.png
 assets/portrait_nanami.png
+
+# 元シート (npc_ex/kid/app に切り出し済)
+assets/ex_sheet.png
+assets/kid_sheet.png
+assets/app_sheet.png
