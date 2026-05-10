@@ -110,9 +110,9 @@
     transform-origin:center bottom}
   @keyframes npcBob{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-3px)}}
   .npc.show{opacity:1}
-  /* 会話モードでは NPC を左に、主人公を右に寄せて重なり回避 */
-  .frame.in-convo .npc{filter:drop-shadow(0 4px 0 #0008) brightness(1.05);height:72%;left:4%}
-  .frame.in-convo .nurse{left:72% !important;height:78%}
+  /* 会話モードでは NPC を左・主人公を右、吹き出しは上にあるのでキャラ高さは確保 */
+  .frame.in-convo .npc{filter:drop-shadow(0 4px 0 #0008) brightness(1.05);height:62%;left:4%}
+  .frame.in-convo .nurse{left:72% !important;height:68%}
   .nurse.zzz{animation:bob-sleep 4s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
   @keyframes bob-sleep{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(0.97)}}
@@ -285,18 +285,19 @@
     animation:transitLines 0.4s linear}
   @keyframes transitLines{from{transform:translateX(0)}to{transform:translateX(-40px)}}
 
-  /* 会話モード: ゲージ/カード/HUD を一時停止 */
-  .frame.in-convo .actions{opacity:0.25;pointer-events:none;filter:grayscale(0.5)}
-  .frame.in-convo .hud{opacity:0.6;filter:grayscale(0.4)}
-  .frame.in-convo .timeline{opacity:0.5}
-  .frame.in-convo .footer{opacity:0.4}
-  /* 会話中はステージの吹き出しを大きく目立たせる */
+  /* 会話モード: ゲージ/カード/HUD を半透明化(完全に消さない) */
+  .frame.in-convo .actions{opacity:0.55;pointer-events:none;filter:grayscale(0.3)}
+  .frame.in-convo .hud{opacity:0.75;filter:grayscale(0.2)}
+  .frame.in-convo .timeline{opacity:0.7}
+  .frame.in-convo .footer{opacity:0.6}
+  .frame.in-convo .panel{opacity:0.85} /* ステータスは少しだけ薄く */
+  /* 会話中: 吹き出しは画面上部、キャラと被らない */
   .frame.in-convo .speech{
-    bottom:auto;top:50%;transform:translateY(-50%);
-    font-size:15px;line-height:1.8;padding:14px 16px;
+    bottom:auto;top:8px;transform:none;
+    font-size:14px;line-height:1.7;padding:12px 14px;
     border-color:#ffd060;
     box-shadow:0 0 20px #ffd06080,2px 2px 0 #000;
-    max-height:70%}
+    max-height:42%}
   .frame.in-convo .speech .who{font-size:12px;color:#ffd060}
   .frame.in-convo .nurse{filter:drop-shadow(0 4px 0 #0008) brightness(0.7)}
   /* 会話中は「会話中」インジケータをHUD近くに */
