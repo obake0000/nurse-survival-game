@@ -110,8 +110,9 @@
     transform-origin:center bottom}
   @keyframes npcBob{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-3px)}}
   .npc.show{opacity:1}
-  /* 会話モードでは NPC を強調 */
-  .frame.in-convo .npc{filter:drop-shadow(0 4px 0 #0008) brightness(1.05)}
+  /* 会話モードでは NPC を左に、主人公を右に寄せて重なり回避 */
+  .frame.in-convo .npc{filter:drop-shadow(0 4px 0 #0008) brightness(1.05);height:72%;left:4%}
+  .frame.in-convo .nurse{left:72% !important;height:78%}
   .nurse.zzz{animation:bob-sleep 4s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
   @keyframes bob-sleep{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(0.97)}}
@@ -606,8 +607,8 @@ const SPEAKERS = {
   head:     { name: "主任 ヨウコ" },
   friend:   { name: "同期 ミサキ" },
   doc:      { name: "医師 タカノ" },
-  patient:  { name: "オオモリさん" },
-  grandma:  { name: "ナガコさん" },
+  patient:  { name: "患者 オオモリさん" },
+  grandma:  { name: "患者 ナガコさん" },
   kid:      { name: "ハルカちゃん(8)" },
   ghost:    { name: "ベッド7番" },
   chief:    { name: "看護師長 イシハラ" },
@@ -1926,15 +1927,19 @@ function wanderTick() {
   if (state.napping || state.inConversation || state.decision) return;
   if ($("sleep-overlay").classList.contains("show")) return;
   const nurse = $("nurse-sprite");
-  // スライド演出中は触らない
   if (nurse.className.indexOf("slide-") !== -1) return;
-  // 25%-75% の範囲でランダム移動
-  const x = 25 + Math.random() * 50;
+  // 15%-85% の広範囲。前回位置と離れた点を選んで「右へ左へ」感を強調
+  const prev = parseFloat(nurse.style.left || "50");
+  let x;
+  for (let i = 0; i < 5; i++) {
+    x = 15 + Math.random() * 70;
+    if (Math.abs(x - prev) >= 25) break;
+  }
   nurse.style.left = x + "%";
 }
 function startWander() {
   if (_wanderInterval) clearInterval(_wanderInterval);
-  _wanderInterval = setInterval(wanderTick, 4500);
+  _wanderInterval = setInterval(wanderTick, 3500);
 }
 
 // Slideshow click handlers
