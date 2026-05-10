@@ -634,56 +634,100 @@ const ACTIONS = {
   eat: {
     label: "食事", icon: "🍙", places: ["home","ward","road"],
     cooldown: 8000, delta: { stamina: 26, mental: 6, focus: 0 },
-    line: "おにぎり。塩分が今日も先に効いてくる。",
+    lines: [
+      "おにぎり。塩分が今日も先に効いてくる。",
+      "コンビニのおにぎり、紅鮭。3年目で味覚が、塩に寄ってきた。",
+      "昆布おにぎり、月曜の習慣。曜日で具を決めるの、3年目の知恵。",
+      "おにぎり、3口で食べた。3口で食べる訓練は、誰にもしてもらってない。",
+      "おにぎり、ラップの開け方、3年目で達人。背景音は、ナースコール。",
+      "コンビニのプリン、レジで「スプーンお付けしますか」「いえ家で」嘘。指で食べる。"
+    ],
     cdLines: ["まだお腹が動いてる", "胃が会議中", "塩分過多"],
     effects: "💪+26 💖+6"
   },
   sleep: {
     label: "仮眠", icon: "💤", places: ["home","ward"],
     cooldown: 14000, delta: { stamina: 38, mental: 28, focus: 4 },
-    line: "横になった。瞼の裏でナースコールが鳴り続ける。",
+    lines: [
+      "横になった。瞼の裏でナースコールが鳴り続ける。",
+      "ベッドに沈んだ。布団の重さが、今日いちばん優しい。",
+      "目を閉じた。夢の中でも、巡回してるかもしれない。",
+      "枕に頭。次の夢、また3-Bさんかな。",
+      "アラームをセットしないで、目を閉じた。3年ぶりの、無責任な眠り。"
+    ],
     cdLines: ["まだ眠くない、嘘", "起きたばかり", "もうアラーム鳴る"],
     effects: "💪+38 💖+28"
   },
   shift: {
     label: "業務", icon: "💉", places: ["ward"], work: true,
     cooldown: 12000, delta: { stamina: -14, mental: -10, focus: 16 },
-    line: "巡回した。痛みも、訴えも、自分の足音より大きい。",
+    // shiftの台詞はSHIFT_LINESを使う (重複dedup付き)
     cdLines: ["回りきった", "ナースコールが3床同時"],
     effects: "🎯+16 💪-14 💖-10"
   },
   brk: {
     label: "休憩室", icon: "☕", places: ["ward"],
     cooldown: 10000, delta: { stamina: 8, mental: 14, focus: -2 },
-    line: "コーヒー。あったかい、しか売っていない。",
+    lines: [
+      "コーヒー。あったかい、しか売っていない。",
+      "自販機の缶コーヒー、二番目に冷たいやつ。一番冷たいのは売り切れ。",
+      "ブラック。微糖は新人が買い占めて、3年目の3秒前に売り切れる。",
+      "コーヒーの紙コップ、口紅の跡。今朝の私のじゃない。",
+      "休憩室のお茶、誰のでも3年目で私のお茶になる。黙約。",
+      "ステーションの炊飯ジャー、誰のご飯か3年目で問わない。残ってたら、頂く。"
+    ],
     cdLines: ["カフェイン過多", "コーヒーがまだ胃にいる"],
     effects: "💖+14 💪+8"
   },
   oshi: {
     label: "推し活", icon: "💖", places: ["home","road"],
     cooldown: 14000, delta: { stamina: -4, mental: 22, focus: 4 },
-    line: "推しの配信を観た。今日も、明日生きる理由が補給された。",
+    lines: [
+      "推しの配信を観た。今日も、明日生きる理由が補給された。",
+      "ハルナのMV、3回ループ。3年目で覚えた、3が私の単位。",
+      "インスタライブ。「夜勤の人、無理しないでね」全員に言ってる、けど効く。",
+      "推しのファンレター、3年下書き。今日も送らない、と決めた。",
+      "推しの誕生日、クラウドファンディングで3000円。私の夕飯3日分。後悔は、ない。"
+    ],
     cdLines: ["次の更新は明日", "通知が来ない", "限界オタクは寝ろ"],
     effects: "💖+22"
   },
   commute: {
     label: "出勤", icon: "🚶", places: ["home","road"], move: "ward",
     cooldown: 3000, delta: { stamina: -3, mental: -2, focus: 0 },
-    line: "玄関の鍵を回した。空気が、肺より先に目を覚まさせる。",
+    lines: [
+      "玄関の鍵を回した。空気が、肺より先に目を覚まさせる。",
+      "ナースシューズ、毎朝、私より先に出勤する。",
+      "歩道のヒビを踏んだら、なぜか足が止まる日がある。",
+      "出勤前にもう疲れた。3年目、慣れない。",
+      "寮を出た。月曜の朝の空気は、火曜と違う、と3年目で言える。"
+    ],
     cdLines: ["駅、過ぎた"],
     effects: "→ 病棟へ"
   },
   gohome: {
     label: "帰宅", icon: "🚪", places: ["ward","road"], move: "home",
     cooldown: 3000, delta: { stamina: -2, mental: 6, focus: 0 },
-    line: "鍵を回す音が、今日いちばん、おだやかな音。",
+    lines: [
+      "鍵を回す音が、今日いちばん、おだやかな音。",
+      "玄関のたたき、白衣のシワが、3年分。",
+      "帰宅。風呂、ご飯、寝る。順番は、たぶん、逆になる。",
+      "ようやく、靴を脱げる。",
+      "寮のドア。1Kの灯りが、今日は、私のためにある。"
+    ],
     cdLines: ["家、すぐ"],
-    effects: "→ 家へ"
+    effects: "→ 寮へ"
   },
   wake: {
-    label: "起きる", icon: "⏰", places: [], // napping時のみ手動有効化
+    label: "起きる", icon: "⏰", places: [],
     cooldown: 3000, delta: { stamina: 6, mental: 4, focus: 2 },
-    line: "起きた。3年で覚えた時間より、5分早かった。記録更新。",
+    lines: [
+      "起きた。3年で覚えた時間より、5分早かった。記録更新。",
+      "起きた。シャンプーの匂いで、自分が私であることを確認した。",
+      "起きた。2回目のアラームで。1回目の記憶は、無い。",
+      "起きた。窓の外、まだ街灯が点いている。3年目で、街灯と仲良くなった。",
+      "起きた。スマホを掴む前に、3秒だけ天井を見た。3年目の儀式。"
+    ],
     cdLines: ["まだ起きてる"],
     effects: "💪+6 💖+4"
   }
@@ -1045,6 +1089,16 @@ function stopBgm() { if (_bgmTimer) clearInterval(_bgmTimer); _bgmTimer = null; 
 const $ = (id) => document.getElementById(id);
 function clamp(v, max=100) { return Math.max(0, Math.min(max, v)); }
 function pick(a) { return a[Math.floor(Math.random()*a.length)]; }
+// 重複防止つき pick: 同じ文章を1セッションで1回だけ
+function pickUnique(poolKey, pool) {
+  state.usedLines = state.usedLines || {};
+  state.usedLines[poolKey] = state.usedLines[poolKey] || [];
+  let unused = pool.map((_,i)=>i).filter(i => !state.usedLines[poolKey].includes(i));
+  if (unused.length === 0) { state.usedLines[poolKey] = []; unused = pool.map((_,i)=>i); }
+  const idx = pick(unused);
+  state.usedLines[poolKey].push(idx);
+  return pool[idx];
+}
 function gameTimeMin() {
   const ratio = state.daySec / DAY_DURATION_SEC;
   return ((6 + ratio*24) % 24) * 60; // 1日は朝6時から始まる
@@ -1342,7 +1396,7 @@ function doAction(id) {
   if (id === "sleep") {
     state.napping = true;
     popBigAction(a.icon);
-    showSpeech("self", a.line);
+    showSpeech("self", a.lines ? pickUnique("act_sleep", a.lines) : a.line);
     render();
     playSleepTransition();
     save();
@@ -1355,7 +1409,7 @@ function doAction(id) {
   if (a.move && a.move !== state.place) {
     const fromPlace = state.place;
     popBigAction(a.icon);
-    showSpeech("self", a.line);
+    showSpeech("self", a.lines ? pickUnique("act_" + id, a.lines) : a.line);
     playMoveTransition(fromPlace, a.move, () => {
       state.place = a.move;
       showPlaceBadge();
@@ -1374,8 +1428,11 @@ function doAction(id) {
   // Big pop animation
   popBigAction(a.icon);
 
-  // Speech: shift uses random SHIFT_LINES
-  const line = (id === "shift") ? pick(SHIFT_LINES) : a.line;
+  // 台詞: lines配列があれば dedup pickUnique、shiftはSHIFT_LINES、なければa.line
+  let line;
+  if (id === "shift") line = pickUnique("shift", SHIFT_LINES);
+  else if (a.lines)   line = pickUnique("act_" + id, a.lines);
+  else                line = a.line;
   showSpeech("self", line);
 
   checkEnd();
@@ -1515,10 +1572,10 @@ function tick() {
     if (state.cooldowns[k] === 0) delete state.cooldowns[k];
   }
 
-  // Random ambient speech
+  // Random ambient speech (dedup)
   if (Math.random() < 0.018 * dtSec * 60 / 60 && !$("speech").classList.contains("show")) {
     if (Date.now() - _speechShown > 4000) {
-      const a = pick(AMBIENT);
+      const a = pickUnique("ambient", AMBIENT);
       showSpeech(a.spk, a.text);
     }
   }
@@ -1880,6 +1937,7 @@ function newGame() {
     today: { shift:0, decision:0, nightmare:0 },
     lastVisitDay: -1,
     playedBursts: [],
+    usedLines: {},
     hardMode: state.hardMode || false,
     ended: false,
     paused: false,
