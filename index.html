@@ -240,16 +240,17 @@
   .crit-warn small{display:block;color:#ffe085;font-size:11px;letter-spacing:2px;margin-top:4px;font-weight:700}
   @keyframes critFlash{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
 
-  /* Big action pop */
+  /* Big action pop (アイコンを長めに表示) */
   .big-pop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
-    pointer-events:none;z-index:8;opacity:0;font-size:48px;
-    text-shadow:0 0 12px #ffd060}
-  .big-pop.show{animation:bigPop 0.9s ease-out forwards}
+    pointer-events:none;z-index:8;opacity:0;font-size:64px;
+    text-shadow:0 0 16px #ffd060,0 0 28px #ffd06080,2px 2px 0 #000}
+  .big-pop.show{animation:bigPop 2.4s ease-out forwards}
   @keyframes bigPop{
-    0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}
-    25%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}
-    50%{transform:translate(-50%,-50%) scale(1.0)}
-    100%{opacity:0;transform:translate(-50%,-50%) scale(1.05) translateY(-12px)}
+    0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}
+    10%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}
+    20%{transform:translate(-50%,-50%) scale(1.0)}
+    75%{opacity:1;transform:translate(-50%,-50%) scale(1.0)}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.05) translateY(-18px)}
   }
 
   /* 仮眠演出 (3秒のフルスクリーン) */
