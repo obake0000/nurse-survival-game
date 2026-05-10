@@ -326,14 +326,21 @@
   .ss-img-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;min-height:0}
   .ss-img{max-width:100%;max-height:100%;object-fit:contain;
-    animation:ssFade 0.8s ease-out}
-  @keyframes ssFade{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+    opacity:1;transform:scale(1);
+    transition:opacity 0.5s ease, transform 0.6s ease}
+  .ss-img.fading-out{opacity:0;transform:scale(1.04)}
+  .ss-img.fading-in{animation:ssFadeIn 0.7s ease-out}
+  @keyframes ssFadeIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
   .ss-cap{padding:14px 16px;background:rgba(13,10,24,0.95);
     color:#f5e9d0;font-size:14px;line-height:1.8;letter-spacing:1px;
     border-top:2px solid #c98c2a;
     white-space:pre-wrap;
-    animation:ssCapIn 0.8s ease-out;min-height:120px}
-  @keyframes ssCapIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    opacity:1;transform:none;
+    transition:opacity 0.45s ease, transform 0.45s ease;
+    min-height:120px}
+  .ss-cap.fading-out{opacity:0;transform:translateY(6px)}
+  .ss-cap.fading-in{animation:ssCapIn 0.7s ease-out}
+  @keyframes ssCapIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .ss-bottom{display:flex;justify-content:space-between;align-items:center;
     padding:6px 12px;background:#0d0a18;border-top:1px solid #2c2a4a;
     color:var(--dim);font-size:11px;letter-spacing:1px}
@@ -574,7 +581,7 @@ const NPC_SHEETS = {
   head:    "assets/npc_chief.png",
   patient: "assets/npc_patient_m.png",
   grandma: "assets/npc_patient_f.png",
-  guard:   "assets/npc_civilian.png",
+  guard:   "assets/npc_guard.png",      // 専用: 警備サトウ (青制服・帽子)
   cleaner: "assets/npc_civilian.png",
   oshi:    "assets/npc_friend.png",
   mom:     "assets/npc_patient_f.png",
@@ -1855,19 +1862,34 @@ function renderSlide() {
   if (!p) { finishSlideshow(); return; }
   const img = $("ss-img");
   const cap = $("ss-cap");
-  img.style.animation = "none"; void img.offsetWidth; img.style.animation = "";
-  cap.style.animation = "none"; void cap.offsetWidth; cap.style.animation = "";
+  img.classList.remove("fading-out","fading-in");
+  cap.classList.remove("fading-out","fading-in");
+  void img.offsetWidth; void cap.offsetWidth;
   img.src = p.src;
   cap.textContent = p.cap;
   $("ss-page").textContent = `${_ssIdx+1} / ${_ssQueue.length}`;
+  img.classList.add("fading-in");
+  cap.classList.add("fading-in");
 }
+let _ssAdvancing = false;
 function advanceSlide() {
-  if (_ssIdx < _ssQueue.length - 1) {
-    _ssIdx++;
-    renderSlide();
-  } else {
-    finishSlideshow();
-  }
+  if (_ssAdvancing) return;
+  _ssAdvancing = true;
+  const img = $("ss-img");
+  const cap = $("ss-cap");
+  img.classList.remove("fading-in");
+  cap.classList.remove("fading-in");
+  img.classList.add("fading-out");
+  cap.classList.add("fading-out");
+  setTimeout(() => {
+    if (_ssIdx < _ssQueue.length - 1) {
+      _ssIdx++;
+      renderSlide();
+    } else {
+      finishSlideshow();
+    }
+    _ssAdvancing = false;
+  }, 480);
 }
 function finishSlideshow() {
   const after = _ssAfter;
