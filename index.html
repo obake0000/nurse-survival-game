@@ -1,0 +1,1989 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0e0a16">
+<title>看護師もーむり退職ゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0a16; --panel:#231a32; --ink:#f5e9d0; --dim:#9a8fb0;
+    --gold:#d6b463; --good:#7be0a4; --bad:#ff5060; --warn:#ffd060;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#000;color:var(--ink);
+    font-family:'DotGothic16','MS Gothic',monospace;
+    -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
+    overscroll-behavior:none}
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at top,#1a1228 0%,#000 100%)}
+  .frame{
+    width:min(100vw,100vh*0.5625);height:min(100vh,100vw/0.5625);
+    max-width:480px;max-height:854px;
+    background:var(--bg);position:relative;overflow:hidden;
+    box-shadow:0 0 0 2px #000,0 0 32px #000;
+    display:flex;flex-direction:column;
+    padding:4px 6px 6px;gap:3px}
+  .scanline{pointer-events:none;position:absolute;inset:0;z-index:200;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 4px);
+    mix-blend-mode:screen;opacity:.5}
+
+  /* HUD */
+  .hud{padding:6px 8px;
+    background:linear-gradient(180deg,#3a2a14,#1f1408);
+    border:3px solid #000;
+    box-shadow:inset 0 0 0 2px #c98c2a,0 2px 0 #000;
+    display:grid;grid-template-columns:auto 1fr auto;
+    align-items:center;gap:10px;position:relative}
+  .hud .hud-period{font-size:30px;line-height:1;flex-shrink:0;
+    filter:drop-shadow(0 0 6px #ffd060)}
+  .hud .hud-mid{display:flex;flex-direction:column;line-height:1.1;align-items:center}
+  .hud .hud-clock{font-size:28px;color:#fff;font-weight:bold;letter-spacing:2px;
+    text-shadow:0 0 8px #ffd060,1px 1px 0 #000}
+  .hud .hud-sub{font-size:10px;color:#ffe085;letter-spacing:1px;margin-top:2px}
+  .hud .place-now{font-size:11px;color:#cbb78d;letter-spacing:1px;margin-top:1px}
+  .hud .hud-right{display:flex;flex-direction:column;align-items:flex-end;
+    line-height:1.15;font-size:10px;color:#cbb78d;letter-spacing:1px;flex-shrink:0}
+  .hud .hud-day{color:#ffe085;font-weight:bold;font-size:13px;letter-spacing:1px;
+    text-shadow:0 0 4px #ff8800}
+
+  /* Timeline */
+  .timeline{position:relative;padding:2px 3px;background:#0d0a18;
+    border:2px solid #2c2a4a;box-shadow:0 2px 0 #000;
+    display:flex;align-items:center;gap:6px}
+  .timebar{position:relative;display:grid;
+    grid-template-columns:5fr 6fr 5fr 8fr;height:16px;flex:1;
+    border:2px solid #000;overflow:hidden;background:#000}
+  .timebar > span{display:grid;place-items:center;color:#fff0cb;
+    font-size:9px;text-shadow:1px 1px 0 #000;
+    border-right:1px solid #000;line-height:1.1;letter-spacing:1px}
+  .timebar > span:nth-child(1){background:#3a2a14;color:#e8c688}
+  .timebar > span:nth-child(2){background:#1f2840;color:#a8c0e0}
+  .timebar > span:nth-child(3){background:#2a1d3e;color:#c8b0e0}
+  .timebar > span:nth-child(4){background:#0a0712;color:#7a7090;border-right:0}
+  .time-pointer{position:absolute;top:-3px;bottom:-3px;width:4px;
+    background:#ffd060;box-shadow:0 0 0 1px #000,0 0 10px #ffd060;
+    transform:translateX(-2px);transition:left .3s ease-out;
+    pointer-events:none;z-index:2}
+
+  .panel{background:var(--panel);position:relative;padding:6px 8px;
+    border:3px solid #000;
+    box-shadow:inset 0 0 0 2px #4a3c66, inset 0 -3px 0 0 #1a1224, 0 2px 0 0 #000}
+
+  /* Stage */
+  .stage{position:relative;flex:1;min-height:170px;
+    border:3px solid #000;box-shadow:inset 0 0 0 2px #2a1d3e;overflow:hidden;
+    background:#1a1428;display:flex;align-items:flex-end;justify-content:center}
+  .stage-bg{position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;opacity:0;
+    transition:opacity 1.0s ease, filter 1.0s ease;z-index:1;
+    filter:saturate(0.85) brightness(0.95)}
+  .stage-bg.show{opacity:0.7}
+  .time-overlay{position:absolute;inset:0;z-index:2;pointer-events:none;
+    transition:background 1.5s ease, opacity 1.5s ease;
+    mix-blend-mode:soft-light;opacity:.45}
+  .stage.tod-morning   .time-overlay{background:rgba(255,235,200,.55);opacity:.35}
+  .stage.tod-day       .time-overlay{background:rgba(255,255,255,.55);opacity:.45}
+  .stage.tod-evening   .time-overlay{background:rgba(180,140,140,.4);opacity:.4;mix-blend-mode:multiply}
+  .stage.tod-deepnight .time-overlay{background:rgba(20,20,40,.45);opacity:.65;mix-blend-mode:multiply}
+
+  .stage.danger{animation:stageWobble 3s ease-in-out infinite}
+  .stage.crit{animation:stageWobble 1.2s ease-in-out infinite,critPulse 0.8s ease-in-out infinite;
+    box-shadow:inset 0 0 0 2px #2a1d3e,inset 0 0 30px #ff2030}
+  @keyframes stageWobble{0%,100%{transform:translate(0,0)}25%{transform:translate(-1px,1px)}75%{transform:translate(1px,-1px)}}
+  @keyframes critPulse{0%,100%{box-shadow:inset 0 0 0 2px #2a1d3e,inset 0 0 24px #ff2030}50%{box-shadow:inset 0 0 0 2px #2a1d3e,inset 0 0 40px #ff2030}}
+
+  .nurse{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);height:88%;
+    image-rendering:auto;animation:bob 2.6s ease-in-out infinite;
+    transition:left 2s ease-in-out, filter .3s;z-index:3;
+    filter:drop-shadow(0 4px 0 #0008)}
+  /* NPC スプライト (主人公より一回り小さく、左端に配置) */
+  .npc{position:absolute;bottom:6px;left:6px;
+    height:78%;width:auto;
+    filter:drop-shadow(0 4px 0 #0008);
+    opacity:0;transition:opacity 0.4s, left 0.6s ease-in-out;
+    z-index:2;
+    animation:npcBob 3.2s ease-in-out infinite;
+    transform-origin:center bottom}
+  @keyframes npcBob{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-3px)}}
+  .npc.show{opacity:1}
+  /* 会話モードでは NPC を強調 */
+  .frame.in-convo .npc{filter:drop-shadow(0 4px 0 #0008) brightness(1.05)}
+  .nurse.zzz{animation:bob-sleep 4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
+  @keyframes bob-sleep{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(0.97)}}
+
+  .speech{
+    position:absolute;left:8px;right:8px;bottom:12px;
+    background:#0d0a18;border:2px solid #fff;color:#fff;font-size:13px;padding:8px 10px;
+    box-shadow:2px 2px 0 #000;line-height:1.5;
+    opacity:0;transform:translateY(3px);transition:opacity .3s,transform .3s;
+    z-index:4;max-height:50%;overflow-y:auto;white-space:pre-wrap}
+  .speech.show{opacity:1;transform:translateY(0)}
+  .speech .who{display:block;font-size:11px;color:var(--gold);
+    letter-spacing:2px;margin-bottom:4px}
+  .speech.tier-crit{border-color:#ff5060;color:#ff8090;font-weight:bold;
+    box-shadow:0 0 12px #ff5060,2px 2px 0 #000}
+  .speech.tier-dark{border-color:#a070d0;color:#cfb0e8;font-style:italic;
+    box-shadow:0 0 6px #a070d0,2px 2px 0 #000}
+
+  .place-badge{position:absolute;left:50%;top:8px;transform:translate(-50%,-12px);
+    z-index:50;pointer-events:none;
+    background:#0d0a18;border:2px solid #c98c2a;
+    color:#ffe085;padding:5px 12px;font-size:13px;letter-spacing:2px;
+    font-weight:bold;box-shadow:2px 2px 0 #000,inset 0 0 0 1px #fff4;
+    opacity:0}
+  .place-badge.show{animation:placeIn 1.8s ease-out forwards}
+  @keyframes placeIn{
+    0%{opacity:0;transform:translate(-50%,-20px)}
+    15%{opacity:1;transform:translate(-50%,0)}
+    80%{opacity:1;transform:translate(-50%,0)}
+    100%{opacity:0;transform:translate(-50%,-12px)}
+  }
+
+  /* Stats */
+  .stats{display:flex;flex-direction:column;gap:4px}
+  .stat .stat-head{display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;letter-spacing:1px}
+  .stat .stat-head .label{color:#cfc7d8}
+  .stat .stat-head .label .icon{font-size:13px;margin-right:2px}
+  .stat .stat-head .num{color:#fff;font-weight:bold;font-size:13px;
+    text-shadow:1px 1px 0 #000}
+  .stat .meter{position:relative;height:10px;background:#000;
+    border:2px solid #000;box-shadow:inset 0 0 0 1px #4a3c66;
+    overflow:hidden}
+  .stat .meter .fill{display:block;height:100%;width:100%;
+    background:linear-gradient(90deg,#7be0a4,#4abf78);
+    box-shadow:inset 0 -3px 0 #1a4030;
+    transition:width .4s ease, background .4s ease}
+  .stat .meter .fill.warn{background:linear-gradient(90deg,#ffd060,#c98c2a);box-shadow:inset 0 -3px 0 #6a4810}
+  .stat .meter .fill.bad{background:linear-gradient(90deg,#ff5060,#a02030);box-shadow:inset 0 -3px 0 #500a10}
+
+  /* Actions */
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .care-btn{position:relative;background:linear-gradient(180deg,#3a2c50,#1f1530);
+    border:3px solid #000;box-shadow:inset 0 0 0 2px #6a5090,0 2px 0 #000;
+    color:var(--ink);padding:8px 6px;cursor:pointer;
+    font-family:inherit;
+    display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;
+    text-align:left;min-height:48px}
+  .care-btn:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 0 0 2px #6a5090,0 1px 0 #000}
+  .care-btn:disabled{opacity:.45;cursor:not-allowed}
+  .care-btn .icon{font-size:24px;line-height:1}
+  .care-btn .text-col{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .care-btn .name{font-size:13px;color:#fff;letter-spacing:1px;text-shadow:1px 1px 0 #000}
+  .care-btn .effects{font-size:9px;color:#cfc7d8;letter-spacing:1px;line-height:1.3}
+  .care-btn .effects .up{color:#7be0a4}
+  .care-btn .effects .down{color:#ff8090}
+  .care-btn.move{box-shadow:inset 0 0 0 2px #c98c2a,0 2px 0 #000;
+    background:linear-gradient(180deg,#3a2a14,#1f1408)}
+  .care-btn.move .name{color:#ffe085}
+  .care-btn .cd-tag{position:absolute;top:2px;right:4px;font-size:9px;
+    color:#ff8090;letter-spacing:1px}
+
+  /* Footer */
+  .footer{display:flex;gap:4px;padding:2px}
+  .footer button{flex:1;background:#0d0a18;border:2px solid #2c2a4a;
+    color:var(--dim);padding:5px;font-family:inherit;font-size:11px;
+    letter-spacing:1px;cursor:pointer}
+
+  /* Motiv 3-2-1 badge on button */
+  .care-btn.motiv{box-shadow:inset 0 0 0 2px #ff5060,0 2px 0 #000;
+    animation:motivPulse 0.6s ease-in-out infinite}
+  .care-btn.motiv .motiv-num{position:absolute;top:3px;right:4px;
+    width:22px;height:22px;border-radius:50%;
+    background:#ff5060;color:#fff;font-size:14px;font-weight:bold;
+    display:grid;place-items:center;
+    box-shadow:0 0 8px #ff5060,2px 2px 0 #000;
+    animation:motivBeat 0.5s ease-in-out infinite}
+  @keyframes motivPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+  @keyframes motivBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+  /* Decision banner */
+  .decision{position:relative;background:linear-gradient(180deg,#3a2a14,#1f1408);
+    border:3px solid #c98c2a;box-shadow:0 0 16px #ffd06080,inset 0 0 0 2px #fff4;
+    padding:8px;display:none;z-index:30}
+  .decision.show{display:flex;gap:8px;align-items:stretch;
+    animation:decIn 0.3s ease-out}
+  @keyframes decIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .dec-content{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .decision-text{font-size:12px;color:#ffe085;line-height:1.4;
+    text-shadow:1px 1px 0 #000}
+  .decision-text .who{display:block;color:#fff;font-size:11px;
+    letter-spacing:1px;margin-bottom:2px}
+  .decision-row{display:flex;gap:6px}
+  .dec-btn{flex:1;background:#0d0a18;border:2px solid #c98c2a;
+    color:#fff;padding:6px 8px;font-family:inherit;font-size:11px;
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dec-btn:active{transform:translateY(1px)}
+  .dec-btn .lbl{font-weight:bold;font-size:12px;color:#ffe085;letter-spacing:1px}
+  .dec-btn .preview{font-size:9px;color:#cfc7d8;letter-spacing:1px}
+  .dec-btn .preview .up{color:#7be0a4}
+  .dec-btn .preview .down{color:#ff8090}
+  .dec-timer-bar{height:4px;background:#000;border:1px solid #c98c2a;overflow:hidden}
+  .dec-timer-bar i{display:block;height:100%;background:linear-gradient(90deg,#ffd060,#ff5060);
+    transition:width .15s linear}
+
+  /* Crit warning overlay */
+  .crit-warn{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);
+    text-align:center;
+    background:linear-gradient(180deg,#9a0a0a,#5a0a0a);
+    border:3px solid #ff5060;color:#fff;padding:10px 12px;
+    font-size:15px;font-weight:bold;line-height:1.5;letter-spacing:1px;
+    box-shadow:0 0 18px #ff5060,2px 2px 0 #000;z-index:6;
+    display:none}
+  .crit-warn.show{display:block;animation:critFlash 0.7s ease-in-out infinite}
+  .crit-warn small{display:block;color:#ffe085;font-size:11px;letter-spacing:2px;margin-top:4px;font-weight:700}
+  @keyframes critFlash{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+
+  /* Big action pop */
+  .big-pop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
+    pointer-events:none;z-index:8;opacity:0;font-size:48px;
+    text-shadow:0 0 12px #ffd060}
+  .big-pop.show{animation:bigPop 0.9s ease-out forwards}
+  @keyframes bigPop{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}
+    25%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}
+    50%{transform:translate(-50%,-50%) scale(1.0)}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.05) translateY(-12px)}
+  }
+
+  /* 仮眠演出 (3秒のフルスクリーン) */
+  .sleep-overlay{position:absolute;inset:0;z-index:60;
+    background:rgba(0,4,12,0.94);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;padding:30px}
+  .sleep-overlay.show{display:flex;animation:fadeIn 0.4s ease-out}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .sleep-overlay img{max-width:88%;max-height:62%;object-fit:contain;
+    filter:drop-shadow(0 0 18px #88e0ff80) brightness(0.85);
+    animation:sleepBob 3s ease-in-out infinite}
+  @keyframes sleepBob{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.02) translateY(-3px)}}
+  .sleep-overlay .zzz{font-size:42px;color:#88e0ff;letter-spacing:8px;font-weight:bold;
+    text-shadow:0 0 18px #88e0ff,2px 2px 0 #000;
+    animation:zzzBlink 1.2s ease-in-out infinite}
+  @keyframes zzzBlink{0%{opacity:0.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}100%{opacity:0.4;transform:scale(0.95)}}
+  .sleep-overlay .label{color:#cfc7d8;font-size:13px;letter-spacing:3px}
+
+  /* 移動スライド: 看護師スプライトが横に飛んでいき、移動先のbgで戻ってくる */
+  .nurse.slide-out-right{animation:slideOutR 0.45s ease-in forwards !important}
+  .nurse.slide-out-left{animation:slideOutL 0.45s ease-in forwards !important}
+  .nurse.slide-in-left{animation:slideInL 0.55s ease-out forwards !important}
+  .nurse.slide-in-right{animation:slideInR 0.55s ease-out forwards !important}
+  @keyframes slideOutR{from{transform:translateX(-50%)}to{transform:translateX(150%);opacity:0.6}}
+  @keyframes slideOutL{from{transform:translateX(-50%)}to{transform:translateX(-250%);opacity:0.6}}
+  @keyframes slideInL{from{transform:translateX(-250%);opacity:0.6}to{transform:translateX(-50%);opacity:1}}
+  @keyframes slideInR{from{transform:translateX(150%);opacity:0.6}to{transform:translateX(-50%);opacity:1}}
+  /* 移動演出中のステージにスピード感 */
+  .stage.in-transit::after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;
+    background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(255,224,133,0.18) 18px 22px);
+    animation:transitLines 0.4s linear}
+  @keyframes transitLines{from{transform:translateX(0)}to{transform:translateX(-40px)}}
+
+  /* 会話モード: ゲージ/カード/HUD を一時停止 */
+  .frame.in-convo .actions{opacity:0.25;pointer-events:none;filter:grayscale(0.5)}
+  .frame.in-convo .hud{opacity:0.6;filter:grayscale(0.4)}
+  .frame.in-convo .timeline{opacity:0.5}
+  .frame.in-convo .footer{opacity:0.4}
+  /* 会話中はステージの吹き出しを大きく目立たせる */
+  .frame.in-convo .speech{
+    bottom:auto;top:50%;transform:translateY(-50%);
+    font-size:15px;line-height:1.8;padding:14px 16px;
+    border-color:#ffd060;
+    box-shadow:0 0 20px #ffd06080,2px 2px 0 #000;
+    max-height:70%}
+  .frame.in-convo .speech .who{font-size:12px;color:#ffd060}
+  .frame.in-convo .nurse{filter:drop-shadow(0 4px 0 #0008) brightness(0.7)}
+  /* 会話中は「会話中」インジケータをHUD近くに */
+  .convo-tap{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
+    background:#0d0a18;border:2px solid #ffd060;color:#ffe085;
+    padding:4px 12px;font-size:11px;letter-spacing:2px;
+    box-shadow:2px 2px 0 #000;z-index:5;
+    display:none;animation:tapHint 1.5s ease-in-out infinite}
+  .frame.in-convo .convo-tap{display:block}
+  @keyframes tapHint{0%,100%{opacity:0.7}50%{opacity:1}}
+
+  /* "そろそろ帰ろう" hint card */
+  .care-btn.hint{box-shadow:inset 0 0 0 2px #7be0a4,0 2px 0 #000;
+    animation:hintGlow 1.5s ease-in-out infinite}
+  .care-btn.hint .name{color:#7be0a4}
+  @keyframes hintGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
+  .care-btn.hint::before{content:"そろそろ";position:absolute;top:-8px;left:6px;
+    background:#7be0a4;color:#0e0a16;font-size:9px;font-weight:bold;
+    padding:1px 5px;letter-spacing:1px;
+    box-shadow:1px 1px 0 #000}
+
+  /* Slideshow (ending) */
+  .slideshow{position:absolute;inset:0;z-index:150;
+    background:#000;display:none;flex-direction:column}
+  .slideshow.show{display:flex}
+  .ss-img-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;position:relative;min-height:0}
+  .ss-img{max-width:100%;max-height:100%;object-fit:contain;
+    animation:ssFade 0.8s ease-out}
+  @keyframes ssFade{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+  .ss-cap{padding:14px 16px;background:rgba(13,10,24,0.95);
+    color:#f5e9d0;font-size:14px;line-height:1.8;letter-spacing:1px;
+    border-top:2px solid #c98c2a;
+    white-space:pre-wrap;
+    animation:ssCapIn 0.8s ease-out;min-height:120px}
+  @keyframes ssCapIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .ss-bottom{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 12px;background:#0d0a18;border-top:1px solid #2c2a4a;
+    color:var(--dim);font-size:11px;letter-spacing:1px}
+  .ss-bottom .ss-tap{color:#ffe085;letter-spacing:2px}
+  .ss-bottom button{background:transparent;border:1px solid var(--dim);
+    color:var(--dim);padding:3px 10px;font-family:inherit;font-size:10px;
+    cursor:pointer;letter-spacing:1px}
+
+  /* Modals */
+  .modal{position:absolute;inset:0;z-index:100;
+    background:rgba(0,0,0,.85);display:none;
+    align-items:center;justify-content:center;padding:20px}
+  .modal.show{display:flex}
+  .modal-box{background:linear-gradient(180deg,#1f1530,#0e0a16);
+    border:3px solid #c98c2a;box-shadow:0 0 30px #ffd06080,inset 0 0 0 2px #2a1d3e;
+    padding:16px 14px;max-width:340px;width:100%;
+    color:var(--ink);font-size:13px;line-height:1.6;text-align:center}
+  .modal-box h1{margin:0 0 8px;color:var(--gold);font-size:24px;letter-spacing:3px;
+    text-shadow:0 0 8px #ff8800,2px 2px 0 #000}
+  .modal-box h2{margin:0 0 8px;color:var(--gold);font-size:18px;letter-spacing:2px}
+  .modal-box .sub{font-size:11px;color:var(--dim);letter-spacing:1px;margin:6px 0}
+  .modal-box p{margin:6px 0}
+  .modal-box .em{color:var(--gold)}
+  button.gold{background:linear-gradient(180deg,#ffd060,#c98c2a);color:#1a1408;
+    border:3px solid #000;box-shadow:0 3px 0 #000;
+    padding:10px 18px;font-family:inherit;font-size:14px;font-weight:bold;
+    letter-spacing:2px;cursor:pointer;margin-top:8px}
+  button.gold:active{transform:translateY(2px);box-shadow:0 1px 0 #000}
+  .modal-box .stats-line{font-size:12px;color:#ffe085;margin:6px 0;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="app"><div class="frame" id="frame">
+  <div class="scanline"></div>
+
+  <div class="hud" id="hud">
+    <span class="hud-period" id="period-icon">🌅</span>
+    <div class="hud-mid">
+      <span class="hud-clock" id="time-display">06:00</span>
+      <span class="hud-sub" id="period-label">朝 6-11</span>
+      <span class="place-now" id="place-now">📍 寮</span>
+    </div>
+    <div class="hud-right">
+      <span class="hud-day" id="day-num">月 1/5</span>
+      <span id="day-time-tag">残45秒</span>
+      <span><span id="header-stat">体100</span></span>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="timebar">
+      <span>朝 6-11</span><span>昼 11-17</span><span>夜 17-22</span><span>深夜 22-6</span>
+      <i id="time-pointer" class="time-pointer"></i>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <img class="stage-bg" id="stage-bg" src="" alt="">
+    <div class="time-overlay"></div>
+    <div class="place-badge" id="place-badge">📍 寮</div>
+    <img class="npc" id="npc-sprite" src="" alt="">
+    <img class="nurse" id="nurse-sprite" src="" alt="">
+    <div class="big-pop" id="big-pop">🍙</div>
+    <div class="crit-warn" id="crit-warn">⚠ あぶない<small>もう、ダメ、かも</small></div>
+    <div class="speech" id="speech"><span class="who">ナナミ</span><span id="speech-body">…朝が来てしまった。</span></div>
+    <div class="convo-tap" id="convo-tap">▶ タップで次へ</div>
+  </div>
+
+  <div class="decision" id="decision-banner">
+    <div class="dec-content">
+      <div class="decision-text" id="decision-text"><span class="who">…</span><span id="decision-body">…</span></div>
+      <div class="decision-row">
+        <button class="dec-btn" id="dec-a"></button>
+        <button class="dec-btn" id="dec-b"></button>
+      </div>
+      <div class="dec-timer-bar"><i id="dec-timer-fill" style="width:100%"></i></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-head">
+          <span class="label"><span class="icon">💪</span>体力</span>
+          <span class="num" id="num-stamina">100</span>
+        </div>
+        <div class="meter"><span class="fill" id="bar-stamina"></span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-head">
+          <span class="label"><span class="icon">💖</span>心</span>
+          <span class="num" id="num-mental">100</span>
+        </div>
+        <div class="meter"><span class="fill" id="bar-mental"></span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-head">
+          <span class="label"><span class="icon">🎯</span>集中</span>
+          <span class="num" id="num-focus">60</span>
+        </div>
+        <div class="meter"><span class="fill" id="bar-focus"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions" id="actions">
+    <!-- 4 buttons rendered by JS based on place -->
+  </div>
+
+  <div class="footer">
+    <button id="btn-pause">⏸ ポーズ</button>
+    <button id="btn-bgm">🎵 BGM</button>
+    <button id="btn-sfx">🔊 SE</button>
+  </div>
+
+  <!-- Sleep transition overlay (3秒) -->
+  <div class="sleep-overlay" id="sleep-overlay">
+    <div class="label">仮眠</div>
+    <img id="sleep-img" src="" alt="">
+    <div class="zzz">Z z z…</div>
+  </div>
+
+  <!-- Slideshow ending -->
+  <div class="slideshow" id="slideshow">
+    <div class="ss-img-wrap"><img class="ss-img" id="ss-img" src="" alt=""></div>
+    <div class="ss-cap" id="ss-cap"></div>
+    <div class="ss-bottom">
+      <button id="ss-skip">SKIP &gt;&gt;</button>
+      <span class="ss-tap" id="ss-tap">▶ タップで次へ</span>
+      <span id="ss-page">1 / 10</span>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div class="modal show" id="title-modal">
+    <div class="modal-box">
+      <h1>看護師もーむり<br>退職ゲーム</h1>
+      <p class="sub">月〜金、退職届を出さずに<br>土曜日まで生き残る</p>
+      <p style="font-size:11px;color:#cfc7d8;line-height:1.6">
+        <b style="color:#ffe085">ナナミ</b>・3年目・看護師寮ぐらし<br>
+        体力 / 心 / 集中、どれかが0で終わり
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+        <button class="gold" id="btn-start">▶ ふつう</button>
+        <button class="gold" id="btn-start-hard" style="background:linear-gradient(180deg,#ff5060,#9a0a0a);color:#fff">▶ ハード(減衰1.8倍)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div class="modal" id="help-modal">
+    <div class="modal-box">
+      <h2>ルール</h2>
+      <div style="text-align:left;font-size:12px;line-height:1.7">
+        <p>📅 <b>5日(月〜金)</b> 生き延びれば土曜日。</p>
+        <p>🕐 1日 = 約45秒。朝→昼→夜→深夜の順に進む。</p>
+        <p>📍 <b>家・道・病棟</b>の3場所。出勤/帰宅で移動。</p>
+        <p>💪 <b>体力</b> 0で身体崩壊<br>
+           💖 <b>心</b> 0で退職届<br>
+           🎯 <b>集中</b> 0で薬を取り違える</p>
+        <p>🍙 食事・💤 仮眠・💉 業務・☕ 休憩室・💖 推し活で回復。</p>
+        <p>💉 業務は病棟、9-21時のみ。</p>
+      </div>
+      <button class="gold" id="btn-help-close">閉じる</button>
+    </div>
+  </div>
+
+  <!-- Day end -->
+  <div class="modal" id="dayend-modal">
+    <div class="modal-box">
+      <h2 id="dayend-title">月曜 終了</h2>
+      <p id="dayend-flavor" class="sub">…</p>
+      <div class="stats-line" id="dayend-stats">…</div>
+      <button class="gold" id="btn-dayend-next">▶ 次の朝へ</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div class="modal" id="gameover-modal">
+    <div class="modal-box">
+      <h1 style="color:#ff5060;text-shadow:0 0 12px #ff0000">もーむり</h1>
+      <p id="gameover-cause" style="color:#ff8090">…</p>
+      <p id="gameover-line" style="font-size:12px;color:#cfc7d8">…</p>
+      <div class="stats-line" id="gameover-stats">…</div>
+      <button class="gold" id="btn-gameover-restart">▶ もう一度</button>
+    </div>
+  </div>
+
+  <!-- Victory -->
+  <div class="modal" id="victory-modal">
+    <div class="modal-box">
+      <h1 style="font-size:32px;letter-spacing:6px">土曜日</h1>
+      <p style="color:#ffe085;font-size:14px">やっと、休める。</p>
+      <p id="victory-line" style="font-size:12px;color:#cfc7d8;font-style:italic">…</p>
+      <div class="stats-line" id="victory-stats">…</div>
+      <p style="color:#9a8fb0;font-size:10px">月曜日が来るまでの猶予。</p>
+      <button class="gold" id="btn-victory-close">▶ また月曜から</button>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+"use strict";
+
+// ===== Constants =====
+const SAVE_KEY = "nurse_simple_v1";
+const DAY_DURATION_SEC = 45;
+const TICK_MS = 1000;
+const TOTAL_DAYS = 5;
+const WEEKDAYS = ["月","火","水","木","金"];
+const SHIFT_START = 9, SHIFT_END = 21;
+
+const ASSET = {
+  bg_home:    "assets/bg_home.png",
+  bg_road:    "assets/bg_road.png",
+  bg_ward:    "assets/bg_ward.png",
+  bg_break:   "assets/bg_breakroom.png",
+  bg_sat:     "assets/bg_saturday.png",
+  // ナナミ立ち絵: 場所に応じて私服 / ナース服を切替
+  nanami_casual:       "assets/nanami_casual.png",
+  nanami_casual_tired: "assets/nanami_casual_tired.png",
+  nanami_nurse:        "assets/nanami_nurse.png",
+  nanami_nurse_tired:  "assets/nanami_nurse_tired.png",
+  nurse_sleep:         "assets/nanami_pajama_sleep.png"
+};
+// NPCスプライト (1フレーム抽出済の単独PNG)
+const NPC_SHEETS = {
+  friend:  "assets/npc_friend.png",
+  doc:     "assets/npc_doc.png",
+  senpai:  "assets/npc_senpai.png",
+  kohai:   "assets/npc_kohai.png",
+  chief:   "assets/npc_chief.png",
+  head:    "assets/npc_chief.png",
+  patient: "assets/npc_patient_m.png",
+  grandma: "assets/npc_patient_f.png",
+  guard:   "assets/npc_civilian.png",
+  cleaner: "assets/npc_civilian.png",
+  oshi:    "assets/npc_friend.png",
+  mom:     "assets/npc_patient_f.png",
+  ex:      "assets/npc_civilian.png",
+  app:     "assets/npc_civilian.png",
+  brother: "assets/npc_civilian.png",
+  kid:     "assets/npc_friend.png"
+};
+// エンディング紙芝居 (画像+キャプション、タップで進行)
+const SLIDESHOWS = {
+  clear: [
+    { src:"assets/ending_clear_01.png", cap:"土曜日。\nアラームを止めなくていい朝、目が覚めたのは4時半だった。\n体は、3年で覚えてしまった時間だ。" },
+    { src:"assets/ending_clear_01.png", cap:"二度寝、を試した。\n意識は落ちないが、体は、休もうとしている。\n20年ぶりに、私は、私を許す方向で動いている。" },
+    { src:"assets/ending_clear_02.png", cap:"カーテンを開けた。\n平日に見ない太陽の角度。\n空気が、肺ではなく、目から入ってくる味がする。" },
+    { src:"assets/ending_clear_03.png", cap:"コンビニまで散歩。\n「いつもの方ですね」と店員。\n3年目で、頷ける日が、初めて来た。" },
+    { src:"assets/ending_clear_03.png", cap:"プリンを2個、買った。\n1個は自分用、もう1個は、あとで食べる用。\n「あとで」という未来を、3年ぶりに信じている。" },
+    { src:"assets/ending_clear_04.png", cap:"公園のベンチでプリン。\n一口目で、涙が出た。\n隣の老人「お姉さん、寝てる？」寝ていない。人間の格好を、維持している。" },
+    { src:"assets/ending_clear_05.png", cap:"推しの配信を 2 時間。\n罪悪感、ゼロ。\n推しが「夜勤の方、無理しないで」と言った時、画面に向かって「やりますよ」と返した。\nやらない、今日は。" },
+    { src:"assets/ending_clear_06.png", cap:"本屋で看護の棚。\n手が伸びかけて、止めた。\n隣の旅行雑誌をめくった。沖縄。3年前、卒業旅行で行く予定だった場所だ。" },
+    { src:"assets/ending_clear_07.png", cap:"夕方、母から LINE。\n「今日も夜勤？」\n「今日は休み」\n既読が、3秒で付いた。母も、土曜日を待っていた。" },
+    { src:"assets/ending_clear_07.png", cap:"夜、ベッドに入った。\nアラームをセットしないで、目を閉じる。\n3年ぶりの、無責任な眠り。\n月曜日の自分は、今日の自分が、ちゃんと、休ませた。" }
+  ],
+  mental: [
+    { src:"assets/ending_mental_01.png", cap:"火曜日の夜中、洗濯機の音で目が覚めた。\n回したのは、月曜の朝。誰も、止めていなかった。" },
+    { src:"assets/ending_mental_01.png", cap:"起き上がろうとして、天井を見た。\n3時間。途中で、いったん、トイレに行った。\nトイレの帰り、ベッドが、知らない人のベッドに見えた。" },
+    { src:"assets/ending_mental_02.png", cap:"シャワーを浴びた記憶が、3日分、消えていた。\n鏡を見たら、髪に、洗っていない感触はない。\n誰かが、洗ったのか。私は、誰だったのか。" },
+    { src:"assets/ending_mental_02.png", cap:"ロッカーから退職届の下書きが出てきた。\n日付欄に、今日の日付を、入れた。\n出す相手の名前を、書こうとして、手が、止まった。" },
+    { src:"assets/ending_mental_03.png", cap:"天井を見て、夜が明けた。\n返事は、来なかった。\nLINE のリストを、もう一度、上から下へ、スクロール。\n誰にも送っていない下書きが、3週間、残っていた。" },
+    { src:"assets/ending_mental_03.png", cap:"病院に休職届を、メールで送った。\n返事は、来た。「お大事に」のスタンプ1つ。\n3年分の自分が、スタンプ1つ分、ということが、今は、ありがたい。" }
+  ]
+};
+
+// ===== Speakers (from original) =====
+const SPEAKERS = {
+  self:     { name: "ナナミ" },
+  head:     { name: "主任 ヨウコ" },
+  friend:   { name: "同期 ミサキ" },
+  doc:      { name: "医師 タカノ" },
+  patient:  { name: "オオモリさん" },
+  grandma:  { name: "ナガコさん" },
+  kid:      { name: "ハルカちゃん(8)" },
+  ghost:    { name: "ベッド7番" },
+  chief:    { name: "看護師長 イシハラ" },
+  senpai:   { name: "先輩 ホリ" },
+  kohai:    { name: "後輩 リコ" },
+  brother:  { name: "弟 ハジメ" },
+  ex:       { name: "元彼 タツヤ" },
+  cleaner:  { name: "清掃 タカハシ" },
+  guard:    { name: "警備 サトウ" },
+  oshi:     { name: "推し ハルナ" },
+  app:      { name: "アプリの男" },
+  mom:      { name: "母 (LINE)" },
+  narrator: { name: "ナレーション" }
+};
+
+const PLACE_LABEL = { home: "🛏️ 看護師寮", road: "🛣️ 通勤路", ward: "🏥 病棟" };
+
+// ===== Actions (from original, simplified) =====
+const ACTIONS = {
+  eat: {
+    label: "食事", icon: "🍙", places: ["home","ward","road"],
+    cooldown: 8000, delta: { stamina: 26, mental: 6, focus: 0 },
+    line: "おにぎり。塩分が今日も先に効いてくる。",
+    cdLines: ["まだお腹が動いてる", "胃が会議中", "塩分過多"],
+    effects: "💪+26 💖+6"
+  },
+  sleep: {
+    label: "仮眠", icon: "💤", places: ["home","ward"],
+    cooldown: 14000, delta: { stamina: 38, mental: 28, focus: 4 },
+    line: "横になった。瞼の裏でナースコールが鳴り続ける。",
+    cdLines: ["まだ眠くない、嘘", "起きたばかり", "もうアラーム鳴る"],
+    effects: "💪+38 💖+28"
+  },
+  shift: {
+    label: "業務", icon: "💉", places: ["ward"], work: true,
+    cooldown: 12000, delta: { stamina: -14, mental: -10, focus: 16 },
+    line: "巡回した。痛みも、訴えも、自分の足音より大きい。",
+    cdLines: ["回りきった", "ナースコールが3床同時"],
+    effects: "🎯+16 💪-14 💖-10"
+  },
+  brk: {
+    label: "休憩室", icon: "☕", places: ["ward"],
+    cooldown: 10000, delta: { stamina: 8, mental: 14, focus: -2 },
+    line: "コーヒー。あったかい、しか売っていない。",
+    cdLines: ["カフェイン過多", "コーヒーがまだ胃にいる"],
+    effects: "💖+14 💪+8"
+  },
+  oshi: {
+    label: "推し活", icon: "💖", places: ["home","road"],
+    cooldown: 14000, delta: { stamina: -4, mental: 22, focus: 4 },
+    line: "推しの配信を観た。今日も、明日生きる理由が補給された。",
+    cdLines: ["次の更新は明日", "通知が来ない", "限界オタクは寝ろ"],
+    effects: "💖+22"
+  },
+  commute: {
+    label: "出勤", icon: "🚆", places: ["home","road"], move: "ward",
+    cooldown: 3000, delta: { stamina: -3, mental: -2, focus: 0 },
+    line: "玄関の鍵を回した。空気が、肺より先に目を覚まさせる。",
+    cdLines: ["駅、過ぎた"],
+    effects: "→ 病棟へ"
+  },
+  gohome: {
+    label: "帰宅", icon: "🚪", places: ["ward","road"], move: "home",
+    cooldown: 3000, delta: { stamina: -2, mental: 6, focus: 0 },
+    line: "鍵を回す音が、今日いちばん、おだやかな音。",
+    cdLines: ["家、すぐ"],
+    effects: "→ 家へ"
+  },
+  wake: {
+    label: "起きる", icon: "⏰", places: [], // napping時のみ手動有効化
+    cooldown: 3000, delta: { stamina: 6, mental: 4, focus: 2 },
+    line: "起きた。3年で覚えた時間より、5分早かった。記録更新。",
+    cdLines: ["まだ起きてる"],
+    effects: "💪+6 💖+4"
+  }
+};
+
+// やる気の窓 / motivation window: 3-2-1 カウントが循環、外すと罰
+const MOTIV_PENALTIES = {
+  wake:    { lines: ["起きれない。天井を10分、見ていた。動こうとしたら、もう12分。",
+                     "二度寝した。アラーム5回、覚えていない。",
+                     "布団の重さが、今日いちばん優しい。重力、味方じゃない。"],
+             delta: { stamina: -8, mental: -10, focus: 0 } },
+  commute: { lines: ["遅刻した。シフト2時間分が、消えた。",
+                     "電車を1本逃した。次は、20分後。",
+                     "出勤前にもう疲れた。3年目、慣れない。"],
+             delta: { stamina: -6, mental: -12, focus: -2 } },
+  shift:   { lines: ["クレームが入った。3-Bさんのご家族から。",
+                     "申し送り漏れ。主任に呼ばれた。",
+                     "ナースコール、3度目で気づいた。"],
+             delta: { stamina: -4, mental: -10, focus: -8 } }
+};
+
+// ===== Ambient pool (subset of full original) =====
+const AMBIENT = [
+  { spk: "patient", text: "「ナナミさん、明日の予定、もう決まりました？」（本人は今日退院予定なし）" },
+  { spk: "head",    text: "「申し送り、3分で。長くなる人は次に回す。」" },
+  { spk: "head",    text: "「先月の残業、来月に回しといて。」" },
+  { spk: "friend",  text: "「ナナミ、目の下クマで地層できてるよ。」" },
+  { spk: "friend",  text: "「夜勤明け、コンビニで一緒にカップ麺どう。」" },
+  { spk: "doc",     text: "「指示出しておきました。あ、口頭で。」" },
+  { spk: "doc",     text: "「あの患者さん、家族と話しといてもらえる？（自分はいない）」" },
+  { spk: "patient", text: "「お姉ちゃん、結婚は？子供は？」" },
+  { spk: "kid",     text: "「ナースさんも泣くの？」" },
+  { spk: "ghost",   text: "「私、まだここにいてもいいですか」（ベッド7番。今は空室）" },
+  { spk: "narrator",text: "ナースコールが鳴った。誰も押していない。" },
+  { spk: "narrator",text: "蛍光灯が一本だけ点滅し続けている。直す予算は来年度。" },
+  { spk: "narrator",text: "自販機が今日も「あったかい」しか売ってない。" },
+  { spk: "self",    text: "シャワーを浴びてないことに気づいた。気づかない方が良かった。" },
+  { spk: "self",    text: "通勤電車で立ったまま2駅寝た。仕事のような。" },
+  { spk: "self",    text: "白衣のポケットに昨日のメモ。「3-Bさん、来週退院」と書いてある。本人は今朝亡くなった。" },
+  { spk: "head",    text: "「あなたは器用だから、今月もシフト多めね。優しく言ってる。」" },
+  { spk: "patient", text: "「あんた、いつもいるね。家にも病棟にも。家族おらんの？」" },
+  { spk: "narrator",text: "体重計に乗った。数字が、昨日より、ちょっと、軽い。" },
+  { spk: "doc",     text: "「ナナミさん、医療従事者って言葉、便利な言葉ですよね。」(意味不明)" },
+  { spk: "kid",     text: "「ナースさん、お父さんとお母さん、毎日くる？」(隣のベッドの子)" },
+  { spk: "patient", text: "「ご飯、おいしかったよ」と、食べてないトレーを返された。" },
+  { spk: "narrator",text: "深夜2時。誰かのいびきが、廊下越しに合唱になっている。" },
+  { spk: "self",    text: "マッチングアプリ。「看護師って意外と病みやすいんでしょ？」既読を付けずに消した。" },
+  { spk: "self",    text: "更衣室の鏡。腰のあたりだけ、妙に重い。20代後半の証だと先輩は言うが、慰めにはならない。" },
+  { spk: "patient", text: "オオモリさん、午前3時、逝去。家族の到着まで、ナナミが手を握っていた。「お母さん」と呼ばれたまま。" },
+  { spk: "doc",     text: "「最近、化粧変えた？元の方が好きだったよ」（返事に「ありがとうございます」を選んだ自分が嫌になる）" },
+  { spk: "friend",  text: "更衣室でミサキが泣いていた。理由は聞かない。おにぎりを半分あげた。" },
+  { spk: "self",    text: "通帳。手取り22万。残業代は申請が面倒で出していない。" },
+  { spk: "self",    text: "生理が来ない。妊娠じゃない、ストレスだ。婦人科に行く時間が、ない。" },
+  { spk: "narrator",text: "終電を逃した。タクシー2,800円。シフト2時間分が、ハンドルを握らない男の財布に流れていく。" },
+  { spk: "self",    text: "親からのLINE「結婚は？」既読、未返信。3週間目。" },
+  { spk: "patient", text: "「ねぇ看護師さん、注射器、わたしのはいくらするの？保険きく？」" },
+  { spk: "head",    text: "「あの子、辞めるって。引き止めて。あなた、聞き上手でしょ。」（自分の話は誰も聞かない）" },
+  { spk: "self",    text: "シャワーで、湯気の中で泣いた。シャンプーの泡が一緒に流れていったから、誰にもバレない。" },
+  { spk: "self",    text: "夜勤明け、コンビニのプリン1個。レジの店員に「お疲れさまです」と言われた。それで、保った。" },
+  { spk: "brother", text: "弟ハジメからLINE「姉ちゃん、3万貸して。今度ちゃんと返す」「就活、明日からマジで始める」" },
+  { spk: "ex",      text: "元彼タツヤから2年ぶりLINE「元気？最近どう？」既読を付けない技術が、3年で身についた。" },
+  { spk: "ex",      text: "元彼タツヤ「結婚するんだ、報告しとくね」既読は付けた。返信は、永遠の下書きにした。" },
+  { spk: "cleaner", text: "清掃のタカハシさん「先生、また夜勤？お母さんに似て、無理するんだから」（私の母と知り合いらしい）" },
+  { spk: "guard",   text: "警備のサトウさん「お疲れさん、これ余ったから」とおにぎり1個。コンビニのレシート付き。" },
+  { spk: "guard",   text: "警備のサトウさん「夜勤、5回連続だよね、覚えてるよ」（誰も覚えていなかったと思っていた）" },
+  { spk: "oshi",    text: "推しハルナの新曲MV、深夜0時公開。歌詞の1番目で泣いた。3回ループした。" },
+  { spk: "oshi",    text: "推しハルナがインスタライブ。「夜勤の人、無理しないでね」と言ってくれた（全員に言ってる）。" },
+  { spk: "app",     text: "マッチングアプリ「医療従事者って大変ですよね、応援してます！」とだけメッセ。応援って何。" },
+  { spk: "mom",     text: "母からLINE「今日も夜勤？無理しないでね、もう30なんだから」（28なんだけど）" },
+  { spk: "grandma", text: "ナガコさん「あんた、若いのに、目の光がうちの娘に似てる」（娘さんは、3年前に亡くなっている）" },
+  { spk: "grandma", text: "ナガコさん「ねぇ、私の手、握ってくれない？昨日、夢で死んだんだよ」" },
+  { spk: "kid",     text: "ハルカちゃん「ナースさん、お絵かきあげる」もらった折り紙の鶴を、ロッカーに貼った。" },
+  { spk: "self",    text: "電車で席を譲ったら『あなたの方がしんどそう』と返された。3秒、世界が止まった。" },
+  { spk: "self",    text: "親戚の集まり「今、何科？」「内科」「じゃあ、この薬って…」3周目の相談。3周目の作り笑顔。" },
+  { spk: "self",    text: "コンビニ店員「いつもありがとうございます」。いつもの、を把握されている。気づいてしまった。" },
+  { spk: "self",    text: "白衣のポケット中身: ボールペン3本、海苔、3-Bさんのメモ、退職届の下書き。退職届だけ、3週間目。" },
+  { spk: "self",    text: "看護学校の同期LINE。結婚報告 4 人目。私は、転職の決意すら、できていない。" },
+  { spk: "self",    text: "シャワーで歯磨きを始めていた。3年目の症状、らしい。" },
+  { spk: "self",    text: "1年目に『慣れる』と言われた。3年目で『これに慣れていいのか』と思っている。" },
+  { spk: "self",    text: "ナースシューズ、今月3足目。歩き方が悪いんじゃない、立ちっぱなしが悪い。" },
+  { spk: "self",    text: "白衣を洗濯機に入れたらボールペンも一緒に回ってた。今週3本目。藍色の白衣、また増えた。" },
+  { spk: "senpai",  text: "先輩ホリ「ナナミちゃん、3年目の壁って、本当にあるんだよ。乗り越えなくていい、避けて通っていい。」" },
+  { spk: "senpai",  text: "先輩ホリ、夜勤明けの缶コーヒーをそっと差し入れ。「これ、自販機の二番目に冷たいやつ。一番冷たいのは売り切れだった。」" },
+  { spk: "kohai",   text: "後輩リコ「ナナミ先輩の申し送り、わかりやすくて、メモしてます。」" },
+  { spk: "kohai",   text: "後輩リコ、休憩室で泣いていた。ナナミも1年目に同じ椅子で泣いた。何も言わずプリン2個置いた。" },
+  { spk: "chief",   text: "看護師長イシハラさん「ナナミさん、来月のシフト、希望通り入れたから。」（嘘じゃない、初めて）" },
+  { spk: "chief",   text: "看護師長「主任が厳しいでしょ。私から言っとくから、気にしないで。」" },
+  { spk: "ghost",   text: "ベッド7番から、また音。誰もいないことを確認するのが、夜勤の3つ目の業務。" },
+  { spk: "self",    text: "更衣室の鏡、自分と目が合った瞬間、相手が先に視線を逸らした。" },
+  { spk: "narrator",text: "深夜2時、自販機のホットコーヒー。買おうとしたら、釣り銭口に5円玉が3枚。誰の貯金箱だ。今日は私が継承する。" },
+  { spk: "patient", text: "「お姉ちゃん、結婚は？」「相手いません」「じゃあ、うちの息子と」（息子さんは、入院5ヶ月、面会ゼロ）" },
+  { spk: "doc",     text: "医師タカノ「ナナミさん、君、看護師に向いてるね」「やめます」「やめないでね」(往復2秒)" },
+  { spk: "narrator",text: "病室のテレビでバラエティ。患者は寝ている。笑い声だけが、廊下に漏れて、点滴の音と合奏している。" },
+  { spk: "self",    text: "新人時代、患者の「ありがとう」で泣いた。3年目、患者の「すみません」で泣く。次は、何で泣くんだろう。" },
+  { spk: "patient", text: "オオモリさん「ナナミちゃん、私、もう死んでるんじゃないかい」「生きてますよ」「夢の中でも、夢の中だ」" },
+  { spk: "narrator",text: "夜勤明け、駅前のキャッチ「お姉さん、看護師でしょ。うち、安いよ」3年目、見抜かれている。" },
+  { spk: "doc",     text: "医師タカノ「君、注射、上手いね」「練習相手、毎日いますから」（言ってから、空気が止まった）" },
+  { spk: "guard",   text: "サトウさん「裏口、開けとくよ」（誰にも知られないルートを、3年かけて、共有してくれた）" },
+  { spk: "narrator",text: "深夜3時、ステーション。冷蔵庫から缶チューハイが消えた。私だ。記録には、書かない。" },
+  { spk: "self",    text: "シャワーで歯磨きを始めて、終わった頃に、自分が歯磨きをしているのか、髪を洗っているのか、わからなくなった。3年目の症状。" },
+  { spk: "ex",      text: "元彼タツヤ「子供生まれたんだ、男の子」既読は付けた。下書き「おめでとう」を、永遠に保存することにした。" },
+  { spk: "narrator",text: "病院の屋上、自殺対策で柵が増えた。柵の高さが、年々上がっている。誰の経験値だ。" },
+  { spk: "narrator",text: "更衣室のロッカー、今月、また1つ空いた。私のは2列目、上から3番目。空いたロッカーが、今、私を、見ている気がする。" },
+  { spk: "head",    text: "主任「お疲れ。今日、家に帰っていいから」（21時。当然のはずの言葉が、今日いちばんの優しさになる、3年目）" },
+  { spk: "patient", text: "「お姉さん、お子さんは？」「いません」「もったいない」（もったいない、という単語を、人に対して使う、その精神性を、3年目で、まだ理解できない）" },
+  { spk: "self",    text: "推しの誕生日。プレゼント企画のはずが、当日も夜勤。クラウドファンディングで、参加した。" },
+  { spk: "self",    text: "婚活アプリ「看護師さんって優しそうですね」「夜勤って大変ですよね」テンプレ集の存在を察する。" },
+  { spk: "self",    text: "夜勤明けにスタバでMacBook広げてる人を見て、『そっち側』を一瞬考えた。考えた、で終わった。" },
+  { spk: "narrator",text: "病棟で患者から「お姉ちゃんかわいいね」「お姉ちゃん」が「お姉さん」になり、今は「あんた」。3年。" },
+  { spk: "head",    text: "主任「あなた、今日のシフト、自分で組んだの？」「はい」「優秀ね」（24時間入っている）" },
+  { spk: "self",    text: "コンビニのプリン、レジで「スプーン、お付けしますか」「いえ、家で食べるので」（嘘）。ベンチで、指で、食べる。3年目で、技術。" },
+  { spk: "self",    text: "夜勤明け、コンビニで肉まん。レンジで温め直してくれる店員さんがいた。3年目、温かい食事を、人から差し出される、その温度が、わからなくなっていた。" }
+];
+
+// ===== Shift work flavor =====
+const SHIFT_LINES = [
+  "オオモリさんに歯を磨かせた。「お母さん」と呼ばれた。微笑んだ。",
+  "ハルカちゃんの点滴を直した。「痛くない？」と聞かれて「私が？」と返してしまった。",
+  "ベッド7番のシーツを替えた。誰もいないのに、温かい気がした。",
+  "申し送りのメモが、自分の字なのに、読めない。",
+  "巡回した。痛みより先に、薬の副作用の説明が頭をよぎる。",
+  "心電図の音と、自分の心拍が、一瞬同期した。",
+  "「3-Bさん、寝てます」と書いた。実際には、寝たふりだった。",
+  "オムツを替えた。患者は謝った。私も謝った。誰のための仕事だ。",
+  "ナースコール、4番ベッド。行ったら「呼んでない」と言われた。3度目の今日。",
+  "末期の患者の家族から、お辞儀された。深く。長く。返すお辞儀の角度を、いつも迷う。",
+  "夜勤の弁当を、3口食べたところで呼ばれた。戻ったときには、冷えていた。",
+  "巡回中、3-Bさんのベッドに白い布。誰も呼んでいない。ステーションが、まだ知らないからだ。",
+  "「ありがとう」と何度も言う患者。記録欄が真っ赤になる。理由は、書けない。",
+  "採血、新人時代は震えた。3年目、震えるのは、患者の方になった。慣れ、とは、こういうことか。"
+];
+
+const DAY_FLAVORS = [
+  "月曜日。今週分の疲れが、もう肩に届いている。",
+  "火曜日。月曜の余熱で動いている。中身は冷えている。",
+  "水曜日。山場。あと半分、と読みかえる。",
+  "木曜日。金曜の影が、廊下に伸びている。",
+  "金曜日。最終日。土曜まであと1シフト。"
+];
+
+const MORNING_LINES = [
+  "朝が来てしまった…",
+  "朝。…まだ寝たい。",
+  "朝。…夜勤だ。",
+  "朝。…生きてる。一応。",
+  "目覚まし、希望ではなく業務連絡。",
+  "28年生きて、まだ朝は嫌いだ。",
+  "瞼が、契約書より重い。",
+  "ナースシューズが、毎朝先に出勤してる。"
+];
+
+const VICTORY_LINES = [
+  "5日間、退職届を出さなかった。土曜の朝、推しのライブ配信が始まる。",
+  "土曜日。アラームを切って、また寝る。これが、3年目で初めて手に入れた特権。",
+  "土曜日。コンビニのプリンを、家で、ゆっくり、食べる。スプーンを、お願いする。"
+];
+
+// 深夜の悪夢起き (仮眠中、深夜1-5時で発火)
+const NIGHTMARE_LINES = [
+  "夢で、ずっと巡回していた。3-Bさんの顔が、はっきり、と。\n目が覚めて、04:00。体は、寝てない。",
+  "夢の中で、注射器が落ちた。床に刺さった。誰かに、見られた。\n見られた、を、現実だと思って、跳ね起きた。02:30。",
+  "夢で、業務中、ナナミが寝ていた。主任に呼ばれて、辞表を書かされた。\n書き終わって、目が覚めた。字は、自分の字だった。",
+  "夢で、家に、3-Bさんがいた。「お姉ちゃん、明日、退院だよ」と。\n目が覚めて、03:15。3-Bさんは、もう、退院してる。家に、ではなく。",
+  "夢で、ハルカちゃんが大人になっていた。看護師の制服を着ていた。\n「先輩、私、辞めます」と言った。03:42。寝直す気力、ない。"
+];
+
+// 危機警告セリフ (ステータス別)
+const CRIT_WARN = {
+  stamina: { label: "体力がもたない", sub: "倒れる、5秒前" },
+  mental:  { label: "もーむり",       sub: "退職届の下書き、もう書いた" },
+  focus:   { label: "薬を間違える",   sub: "3-Bさんの分、もう一度確認" }
+};
+
+// ===== Conversation bursts (3往復の掛け合い) =====
+const CONVERSATION_BURSTS = [
+  [ {spk:"patient",text:"オオモリさん「お姉ちゃん、お水、頼んだの、忘れてない？」"},
+    {spk:"self",text:"「すみません、今お持ちします」（17分前の依頼。3年目で、忘れる、を、自覚するスピードが、上がった）"},
+    {spk:"patient",text:"「いいんだよ、忙しいんでしょ。3年目だもんね」（優しさの形をした、針）", delta:{mental:-6}} ],
+  [ {spk:"friend",text:"ミサキ「ナナミ、夜勤明け、温泉行こう」"},
+    {spk:"self",text:"「いつ」"},
+    {spk:"friend",text:"「来年」「来年、まだ生きてたら」（生きてたら、を、約束の前置詞にする習慣、3年目）", delta:{mental:8}} ],
+  [ {spk:"head",text:"主任ヨウコ「ナナミさん、来月の希望休、書いた？」"},
+    {spk:"self",text:"「書いてないです」"},
+    {spk:"head",text:"「書かない人は、希望なし、と読みます。優秀ね」", delta:{mental:-10}} ],
+  [ {spk:"doc",text:"医師タカノ「ナナミさん、夜勤、明日も？」"},
+    {spk:"self",text:"「はい」"},
+    {spk:"doc",text:"「俺、明日、休み」（休み、報告された側、3年目で、表情を作る速度、上昇）", delta:{mental:-8}} ],
+  [ {spk:"senpai",text:"先輩ホリ「ナナミちゃん、3年目の壁、こえた？」"},
+    {spk:"self",text:"「壁、見えない」"},
+    {spk:"senpai",text:"「それ、こえてる証拠」", delta:{mental:14}} ],
+  [ {spk:"grandma",text:"ナガコさん「あんた、私の手、握って」"},
+    {spk:"self",text:"（握る）"},
+    {spk:"grandma",text:"「あんたの手、温かいねえ。3年ぶりに、誰かの体温、感じた」", delta:{mental:10}} ],
+  [ {spk:"kid",text:"ハルカちゃん「ナースさん、お母さんに会いたい」"},
+    {spk:"self",text:"「ハルカちゃん、お母さん、来週、来てくれるよ」"},
+    {spk:"kid",text:"「先週も、来週、って言ってた」（『来週』、医療現場の、永遠）", delta:{mental:-12}} ],
+  [ {spk:"guard",text:"サトウさん「お疲れ、これ、おにぎり3個」"},
+    {spk:"self",text:"「3個も、いいんですか」"},
+    {spk:"guard",text:"「うちの娘、看護師。今、九州」「会いに行ってないんですか」「夜勤は、夜勤で、忙しいから」", delta:{mental:16,stamina:4}} ],
+  [ {spk:"mom",text:"母「ナナミ、お正月、帰ってくる？」"},
+    {spk:"self",text:"「シフト次第」"},
+    {spk:"mom",text:"「お父さん、心配してる」「お父さん、3年前から、心配してる」", delta:{mental:-8}} ],
+  [ {spk:"oshi",text:"推しハルナ、配信中。「夜勤の人、私の歌で、5分だけ、休んで」"},
+    {spk:"self",text:"「5分、を、シフト表に、入れていない病院、ある」"},
+    {spk:"oshi",text:"（コメント欄）「ナナミさんお疲れ様」（推しに、認知された気がした、3秒間）", delta:{mental:14}} ],
+  [ {spk:"ex",text:"元彼タツヤ「妻と、別れた」"},
+    {spk:"self",text:"「ご報告、ありがとうございます」"},
+    {spk:"ex",text:"「ナナミ、いま、彼氏は？」「夜勤」（夜勤、彼氏じゃないでしょ、と、自分でも、思う）", delta:{mental:-8}} ],
+  [ {spk:"kohai",text:"後輩リコ「先輩、結婚は？」"},
+    {spk:"self",text:"「うるさい」"},
+    {spk:"kohai",text:"「メモります」「メモらないで」（メモ、3年目の通貨）", delta:{mental:4}} ]
+];
+
+// ===== Decision events (parent-version style, A/B with 7s timeout) =====
+const DECISION_EVENTS = [
+  { id:"patient_call", spk:"patient", text:"オオモリさん「ナナミちゃん、ちょっと来て、お願い」",
+    a:{ lbl:"行く", line:"オオモリさんの手を握った。「お母さん」と呼ばれた。", delta:{stamina:-4, mental:-2, focus:6} },
+    b:{ lbl:"あとで", line:"「すぐ戻ります」と言って、戻れなかった。", delta:{stamina:1, mental:-8, focus:-4} },
+    timeout:"a", places:["ward"] },
+  { id:"head_shift", spk:"head", text:"主任「来週の夜勤、もう1日入れる？優しく言ってる。」",
+    a:{ lbl:"はい…", line:"「はい」と言ってしまった。シフト表が、また真っ黒になる。", delta:{stamina:-6, mental:-14, focus:4} },
+    b:{ lbl:"無理です", line:"「ちょっと、来週は…」言えた。3年目で、初めて。", delta:{stamina:2, mental:12, focus:-2} },
+    timeout:"a", places:["ward"] },
+  { id:"doc_verbal", spk:"doc", text:"医師タカノ「指示出しときました。あ、口頭で。」",
+    a:{ lbl:"書き取る", line:"白衣のメモに書いた。3行目で字が乱れた。", delta:{stamina:-3, mental:-4, focus:8} },
+    b:{ lbl:"流す", line:"「はい」と言って、書かなかった。後で、思い出せない。", delta:{mental:2, focus:-12} },
+    timeout:"a", places:["ward"] },
+  { id:"kid_drawing", spk:"kid", text:"ハルカちゃん「ナースさん、お絵かき見て見て！」",
+    a:{ lbl:"見る", line:"折り鶴をくれた。ロッカーの3個目になった。", delta:{stamina:-2, mental:14, focus:0} },
+    b:{ lbl:"後で", line:"「あとでね」と言った。8歳が「うん」と言った時の顔、忘れない。", delta:{mental:-8, focus:2} },
+    timeout:"a", places:["ward"] },
+  { id:"mom_line", spk:"mom", text:"母からLINE「結婚は？無理しないでね、もう30なんだから」（28なんだけど）",
+    a:{ lbl:"既読", line:"既読、未返信。3週間目に、追加された。", delta:{mental:-6} },
+    b:{ lbl:"返信", line:"「忙しい、また」と返した。3年で、いちばん多い文字列。", delta:{mental:-2, focus:-2} },
+    timeout:"a", places:["home","road"] },
+  { id:"oshi_live", spk:"oshi", text:"推しハルナのインスタライブ、始まった。",
+    a:{ lbl:"観る", line:"5分だけ、と思って観たら、30分。後悔は、ない。", delta:{stamina:-3, mental:18, focus:-2} },
+    b:{ lbl:"後で", line:"アーカイブで、と思った。アーカイブは、ない、ライブだから。", delta:{mental:-6} },
+    timeout:"a", places:["home","road"] },
+  { id:"app_message", spk:"app", text:"マッチングアプリ「医療従事者って優しそうですね」",
+    a:{ lbl:"返信", line:"「テンプレですか」と返した。ブロックされた。", delta:{mental:-4} },
+    b:{ lbl:"無視", line:"無視。3年目、テンプレを見抜く速度が、上がった。", delta:{mental:2} },
+    timeout:"b", places:["home","road"] },
+  { id:"senpai_coffee", spk:"senpai", text:"先輩ホリ「これ、自販機の二番目に冷たいやつ」と缶コーヒー。",
+    a:{ lbl:"受け取る", line:"「ありがとうございます」言葉が、3年目で、温度を持った。", delta:{stamina:6, mental:14, focus:0} },
+    b:{ lbl:"遠慮", line:"「いえ、自分で…」先輩が、缶を、ゴミ箱に。3年目、後悔。", delta:{mental:-4} },
+    timeout:"a", places:["ward"] },
+  { id:"ex_message", spk:"ex", text:"元彼タツヤ「結婚するんだ、報告しとくね」",
+    a:{ lbl:"既読", line:"既読は付けた。返信は、永遠の下書きにした。", delta:{mental:-16} },
+    b:{ lbl:"おめでとう", line:"「おめでとう」と打って、送信した。指が、震えなかった、3年目。", delta:{mental:-8, focus:2} },
+    timeout:"a", places:["home","road"] },
+  { id:"ghost_call", spk:"ghost", text:"ベッド7番のナースコール。誰もいないはずのベッド。",
+    a:{ lbl:"確認", line:"行った。誰もいない。記録には、書かない。書いた人が、いなくなる。", delta:{stamina:-3, mental:-10, focus:4} },
+    b:{ lbl:"無視", line:"3年目、無視を覚えた。サトウさん（警備）が、無言で頷いた。", delta:{mental:-4, focus:-2} },
+    timeout:"a", places:["ward"] },
+  { id:"chief_eval", spk:"chief", text:"看護師長「来月の人事評価、A」",
+    a:{ lbl:"ありがとう", line:"「ありがとうございます」評価の意味、3年目で、内側に移動。", delta:{mental:14, focus:4} },
+    b:{ lbl:"…ボーナスは？", line:"「Aでも、Bでも、変わらないんですよね」言ってしまった。", delta:{mental:-6, focus:0} },
+    timeout:"a", places:["ward"] },
+  { id:"kohai_cry", spk:"kohai", text:"後輩リコ、休憩室で泣いている。",
+    a:{ lbl:"プリン置く", line:"何も言わずプリン2個置いた。1年目に同じ椅子で泣いた、私の真似。", delta:{mental:8, focus:0} },
+    b:{ lbl:"声かける", line:"「大丈夫？」と聞いた。「先輩も、泣いてました？」と返された。", delta:{mental:-4, focus:-2} },
+    timeout:"a", places:["ward"] }
+];
+
+// ===== State =====
+let state = {
+  day: 0,
+  daySec: 0,
+  place: "home",
+  stamina: 100,
+  mental: 100,
+  focus: 60,
+  cooldowns: {},
+  napping: false,
+  motiv: null,        // { id, count, missed, lastTickMs }
+  decision: null,     // { ev, deadlineMs }
+  nextDecisionMs: 0,
+  ended: false,
+  paused: true,
+  mute: false
+};
+
+// ===== Audio (Web Audio 合成) =====
+let _ac = null;
+function audio() {
+  if (!_ac) {
+    try { _ac = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  return _ac;
+}
+function tone(freq, dur, type, gain, when) {
+  const ctx = audio(); if (!ctx) return;
+  if (state && state.muteSfx && when === undefined) {/* handled by callers */}
+  const t = ctx.currentTime + (when || 0);
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type || "square";
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain || 0.10, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function sfx(name) {
+  if (state.muteSfx) return;
+  const F = SFX[name]; if (F) F();
+}
+const SFX = {
+  eat:    () => { tone(660,0.08,"triangle",0.12); tone(990,0.08,"triangle",0.10,0.07); },
+  sleep:  () => { tone(220,0.4,"sine",0.10); tone(165,0.5,"sine",0.08,0.15); },
+  shift:  () => { tone(330,0.06,"square",0.10); tone(280,0.08,"square",0.10,0.06); },
+  brk:    () => { tone(880,0.12,"sine",0.12); },
+  oshi:   () => { tone(523,0.08,"triangle",0.10); tone(659,0.08,"triangle",0.10,0.07); tone(784,0.12,"triangle",0.10,0.14); },
+  commute:() => { tone(220,0.04,"square",0.08); tone(220,0.04,"square",0.08,0.12); tone(220,0.04,"square",0.08,0.24); },
+  gohome: () => { tone(330,0.06,"sine",0.10); tone(220,0.08,"sine",0.08,0.06); },
+  wake:   () => { tone(440,0.05,"square",0.12); tone(660,0.05,"square",0.12,0.05); tone(880,0.08,"square",0.12,0.10); },
+  wait:   () => { tone(440,0.04,"sine",0.06); },
+  decision:() => { tone(440,0.05,"square",0.10); tone(660,0.05,"square",0.10,0.05); },
+  conv:   () => { tone(523,0.05,"triangle",0.06); },
+  nightmare:() => { tone(165,0.25,"sawtooth",0.10); tone(123,0.25,"sawtooth",0.08,0.06); },
+  crit:   () => { tone(880,0.04,"square",0.10); tone(880,0.04,"square",0.10,0.08); },
+  miss:   () => { tone(220,0.12,"sawtooth",0.10); },
+  win:    () => { [523,659,784,1046].forEach((f,i) => tone(f,0.18,"triangle",0.10,i*0.09)); tone(1318,0.4,"triangle",0.10,0.4); }
+};
+
+// ===== BGM (簡易ステップシーケンサ) =====
+let _bgmTimer = null;
+let _bgmStep = 0;
+const BGM_PATTERNS = {
+  home:   [392,330,392,440,392,330,294,330],  // 寮: 落ち着き
+  ward:   [261,329,392,329,261,329,440,392],  // 病棟: 緊張
+  road:   [349,392,440,392,349,294,349,440]   // 道: 行進
+};
+function bgmPattern() {
+  if (state.napping) return [165,165,196,165,165,165,196,165]; // 寝息
+  return BGM_PATTERNS[state.place] || BGM_PATTERNS.home;
+}
+function startBgm() {
+  if (_bgmTimer) clearInterval(_bgmTimer);
+  if (state.muteBgm) return;
+  const ctx = audio(); if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
+  _bgmStep = 0;
+  _bgmTimer = setInterval(() => {
+    if (state.muteBgm || state.paused) return;
+    const pat = bgmPattern();
+    const f = pat[_bgmStep % pat.length];
+    tone(f, 0.45, "sine", 0.04);
+    tone(f * 2, 0.3, "triangle", 0.025, 0.05);
+    _bgmStep++;
+  }, 480);
+}
+function stopBgm() { if (_bgmTimer) clearInterval(_bgmTimer); _bgmTimer = null; }
+
+// ===== Util =====
+const $ = (id) => document.getElementById(id);
+function clamp(v, max=100) { return Math.max(0, Math.min(max, v)); }
+function pick(a) { return a[Math.floor(Math.random()*a.length)]; }
+function gameTimeMin() {
+  const ratio = state.daySec / DAY_DURATION_SEC;
+  return ((6 + ratio*24) % 24) * 60; // 1日は朝6時から始まる
+}
+function gameHour() { return Math.floor(gameTimeMin()/60) % 24; }
+function fmtTime(min) {
+  const h = Math.floor(min/60) % 24;
+  const m = Math.floor(min) % 60;
+  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+}
+function periodOfHour(h) {
+  if (h >= 6 && h < 11)  return { key:"morning",   icon:"🌅", label:"朝 6-11",   tod:"tod-morning" };
+  if (h >= 11 && h < 17) return { key:"day",       icon:"☀️", label:"昼 11-17",  tod:"tod-day" };
+  if (h >= 17 && h < 22) return { key:"evening",   icon:"🌆", label:"夜 17-22",  tod:"tod-evening" };
+  return { key:"deepnight", icon:"🌙", label:"深夜 22-6", tod:"tod-deepnight" };
+}
+
+// ===== Crit warning =====
+function updateCritWarn() {
+  const el = $("crit-warn");
+  let kind = null;
+  if (state.stamina <= 18) kind = "stamina";
+  else if (state.mental  <= 18) kind = "mental";
+  else if (state.focus   <= 18) kind = "focus";
+  if (!kind) {
+    el.classList.remove("show");
+    return;
+  }
+  const cw = CRIT_WARN[kind];
+  el.innerHTML = `⚠ ${cw.label}<small>${cw.sub}</small>`;
+  el.classList.add("show");
+}
+
+// ===== Render =====
+function render() {
+  if (state.ended) return;
+
+  const h = gameHour();
+  const min = Math.floor(gameTimeMin()) % 60;
+  const period = periodOfHour(h);
+
+  // HUD
+  $("period-icon").textContent = period.icon;
+  $("time-display").textContent = fmtTime(gameTimeMin());
+  $("period-label").textContent = period.label;
+  $("place-now").textContent = "📍 " + PLACE_LABEL[state.place].replace(/^\S+\s/, "");
+  $("day-num").textContent = `${WEEKDAYS[state.day]} ${state.day+1}/${TOTAL_DAYS}`;
+  $("day-time-tag").textContent = "残" + Math.max(0, Math.ceil(DAY_DURATION_SEC - state.daySec)) + "秒";
+  $("header-stat").textContent = (state.hardMode ? "🔥HARD " : "") + "体" + Math.round(state.stamina);
+  if (state.hardMode) $("header-stat").style.color = "#ff8090";
+  else $("header-stat").style.color = "";
+
+  // Timeline pointer
+  const ratio = state.daySec / DAY_DURATION_SEC;
+  $("time-pointer").style.left = (ratio * 100) + "%";
+
+  // Stage
+  const stage = $("stage");
+  stage.classList.remove("tod-morning","tod-day","tod-evening","tod-deepnight","danger","crit");
+  stage.classList.add(period.tod);
+  const tot = state.stamina + state.mental + state.focus;
+  if (tot < 90) stage.classList.add("crit");
+  else if (tot < 150) stage.classList.add("danger");
+
+  // BG
+  const bgKey = state.place === "home" ? "bg_home" : state.place === "ward" ? "bg_ward" : "bg_road";
+  const bg = $("stage-bg");
+  if (bg.dataset.key !== bgKey) {
+    bg.dataset.key = bgKey;
+    bg.classList.remove("show");
+    const img = new Image();
+    img.onload = () => { bg.src = ASSET[bgKey]; bg.classList.add("show"); };
+    img.onerror = () => { bg.classList.remove("show"); };
+    img.src = ASSET[bgKey];
+  }
+
+  // Nurse sprite — napping=寝姿 / 病棟=ナース服 / 寮・道=私服 (疲れ姿あり)
+  const tired = state.stamina <= 35 || state.mental <= 35;
+  let nurseSrc;
+  if (state.napping) {
+    nurseSrc = ASSET.nurse_sleep;
+  } else if (state.place === "ward") {
+    nurseSrc = tired ? ASSET.nanami_nurse_tired : ASSET.nanami_nurse;
+  } else {
+    nurseSrc = tired ? ASSET.nanami_casual_tired : ASSET.nanami_casual;
+  }
+  setNurse(nurseSrc);
+
+  // Stats
+  setBar("stamina", state.stamina);
+  setBar("mental",  state.mental);
+  setBar("focus",   state.focus);
+
+  // Crit warning
+  updateCritWarn();
+
+  // Actions
+  renderActions();
+}
+
+function setBar(id, v) {
+  const fill = $("bar-" + id);
+  const num  = $("num-" + id);
+  const r = Math.round(v);
+  fill.style.width = r + "%";
+  num.textContent = r;
+  fill.classList.remove("warn", "bad");
+  if (r <= 25) fill.classList.add("bad");
+  else if (r <= 50) fill.classList.add("warn");
+}
+
+// ===== Chroma key for nurse sprites =====
+const _keyedCache = {};
+function chromaKey(src) {
+  if (_keyedCache[src]) return Promise.resolve(_keyedCache[src]);
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, c.width, c.height);
+        const px = data.data;
+        for (let i = 0; i < px.length; i += 4) {
+          const r = px[i], g = px[i+1], b = px[i+2];
+          // 緑バック
+          if (g > 130 && g > r + 50 && g > b + 50) { px[i+3] = 0; continue; }
+          // 黄バック (y>200 かつ blue 低)
+          if (r > 200 && g > 200 && b < 120 && Math.abs(r-g) < 40) { px[i+3] = 0; continue; }
+          // 純白バック (4辺由来想定。看護服のオフホワイトは r,g,b 245以下なので残る)
+          if (r > 248 && g > 248 && b > 248) { px[i+3] = 0; continue; }
+        }
+        ctx.putImageData(data, 0, 0);
+        const url = c.toDataURL("image/png");
+        _keyedCache[src] = url;
+        resolve(url);
+      } catch (e) {
+        _keyedCache[src] = src;
+        resolve(src);
+      }
+    };
+    img.onerror = () => { _keyedCache[src] = src; resolve(src); };
+    img.src = src;
+  });
+}
+function setNurse(src) {
+  const el = $("nurse-sprite");
+  if (el.dataset.lastSrc === src) return;
+  el.dataset.lastSrc = src;
+  el.src = src; // 透過済PNGなのでchromaKey不要
+}
+
+// ===== Actions render =====
+function renderActions() {
+  const root = $("actions");
+  root.innerHTML = "";
+  const ids = listActions();
+  const hintId = hintAction();
+  ids.forEach(id => {
+    const a = ACTIONS[id];
+    const cd = state.cooldowns[id] || 0;
+    const blocked = cdBlocked(id) || workBlocked(id);
+    const reason = workBlocked(id) ? "9-21時のみ" : "";
+    const isMotiv = state.motiv && state.motiv.id === id;
+    const isHint = (hintId === id) && !isMotiv;
+    const btn = document.createElement("button");
+    btn.className = "care-btn"
+      + (a.move ? " move" : "")
+      + (isMotiv ? " motiv" : "")
+      + (isHint ? " hint" : "");
+    btn.disabled = blocked;
+    btn.innerHTML = `
+      <span class="icon">${a.icon}</span>
+      <span class="text-col">
+        <span class="name">${a.label}</span>
+        <span class="effects">${reason || a.effects}</span>
+      </span>
+      ${cd > 0 ? `<span class="cd-tag">${Math.ceil(cd/1000)}s</span>` : ""}
+      ${isMotiv ? `<span class="motiv-num">${state.motiv.count}</span>` : ""}
+    `;
+    btn.addEventListener("click", () => doAction(id));
+    root.appendChild(btn);
+  });
+}
+
+// 「そろそろ帰ろう」「そろそろ寝よう」など、緑枠ヒントを出すアクションID
+function hintAction() {
+  const h = gameHour();
+  // 21時を回ったら病棟・道で「帰宅」
+  if ((h >= 21 || h < 5) && (state.place === "ward" || state.place === "road")) return "gohome";
+  // 22時以降、家にいて起きてるなら「仮眠」
+  if (state.place === "home" && (h >= 22 || h < 5) && !state.napping) return "sleep";
+  return null;
+}
+
+function listActions() {
+  if (state.napping) return ["wake"]; // 仮眠中は起きる一択
+  if (state.place === "home") return ["eat","sleep","oshi","commute"];
+  if (state.place === "ward") return ["shift","brk","eat","gohome"];
+  return ["commute","gohome","eat","oshi"];
+}
+
+function cdBlocked(id) {
+  return (state.cooldowns[id] || 0) > 0;
+}
+function workBlocked(id) {
+  if (id !== "shift") return false;
+  const h = gameHour();
+  return !(h >= SHIFT_START && h < SHIFT_END);
+}
+
+// ===== Speech =====
+let _speechTimer = null;
+let _speechShown = 0;
+function showSpeech(speakerId, text, tier) {
+  if (state.mute) return;
+  const el = $("speech");
+  el.classList.remove("tier-crit","tier-dark","tier-flat");
+  if (tier) el.classList.add("tier-" + tier);
+  const sp = SPEAKERS[speakerId] || SPEAKERS.self;
+  el.querySelector(".who").textContent = sp.name;
+  $("speech-body").textContent = text;
+  el.classList.add("show");
+  // NPC立ち絵: 自分以外＆シートあれば表示、自分なら隠す
+  if (speakerId !== "self" && NPC_SHEETS[speakerId]) {
+    showNpc(speakerId);
+  } else {
+    hideNpc();
+  }
+  if (_speechTimer) clearTimeout(_speechTimer);
+  _speechShown = Date.now();
+  const dur = Math.min(8000, 2200 + text.length * 65);
+  _speechTimer = setTimeout(() => {
+    el.classList.remove("show");
+    hideNpc();
+  }, dur);
+}
+
+function showNpc(speakerId) {
+  const npc = $("npc-sprite");
+  const src = NPC_SHEETS[speakerId];
+  if (!src) { hideNpc(); return; }
+  if (npc.dataset.src !== src) {
+    npc.dataset.src = src;
+    npc.src = src;
+  }
+  npc.classList.add("show");
+}
+function hideNpc() {
+  $("npc-sprite").classList.remove("show");
+}
+
+// ===== Action handler =====
+function doAction(id) {
+  if (state.ended) return;
+  const a = ACTIONS[id];
+  if (!a) return;
+  if (cdBlocked(id)) {
+    showSpeech("self", pick(a.cdLines || ["まだだ"]));
+    return;
+  }
+  if (workBlocked(id)) {
+    showSpeech("self", "業務時間外。今は無理。");
+    return;
+  }
+
+  // motiv bonus: 3=+50%, 2=normal, 1=-30%
+  let mult = 1;
+  if (state.motiv && state.motiv.id === id) {
+    if (state.motiv.count === 3) mult = 1.5;
+    else if (state.motiv.count === 1) mult = 0.7;
+    state.motiv = null;
+  }
+
+  state.stamina = clamp(state.stamina + a.delta.stamina * mult);
+  state.mental  = clamp(state.mental  + a.delta.mental  * mult);
+  state.focus   = clamp(state.focus   + a.delta.focus   * mult);
+  state.cooldowns[id] = a.cooldown;
+
+  if (id === "shift") {
+    state.today = state.today || { shift:0, decision:0, nightmare:0 };
+    state.today.shift++;
+  }
+
+  // SFX
+  sfx(id);
+
+  // 仮眠 → napping=true + 3秒の睡眠演出
+  // 起きる → napping=false
+  if (id === "sleep") {
+    state.napping = true;
+    popBigAction(a.icon);
+    showSpeech("self", a.line);
+    render();
+    playSleepTransition();
+    save();
+    return;
+  } else if (id === "wake") {
+    state.napping = false;
+  }
+
+  // 移動演出 (出勤/帰宅)
+  if (a.move && a.move !== state.place) {
+    const fromPlace = state.place;
+    popBigAction(a.icon);
+    showSpeech("self", a.line);
+    playMoveTransition(fromPlace, a.move, () => {
+      state.place = a.move;
+      showPlaceBadge();
+      render();
+    });
+    checkEnd();
+    save();
+    return;
+  }
+  // 移動以外
+  if (a.move) {
+    state.place = a.move;
+    showPlaceBadge();
+  }
+
+  // Big pop animation
+  popBigAction(a.icon);
+
+  // Speech: shift uses random SHIFT_LINES
+  const line = (id === "shift") ? pick(SHIFT_LINES) : a.line;
+  showSpeech("self", line);
+
+  checkEnd();
+  render();
+  save();
+}
+
+function popBigAction(icon) {
+  const el = $("big-pop");
+  el.textContent = icon;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+}
+
+// ===== 仮眠演出 (3秒) =====
+function playSleepTransition() {
+  const ov = $("sleep-overlay");
+  $("sleep-img").src = ASSET.nurse_sleep;
+  ov.classList.add("show");
+  state.paused = true;
+  setTimeout(() => {
+    ov.classList.remove("show");
+    state.paused = false;
+    _lastTick = Date.now();
+  }, 3000);
+}
+
+// ===== 移動スライド演出 =====
+function playMoveTransition(fromPlace, toPlace, onMid) {
+  const nurse = $("nurse-sprite");
+  const stage = $("stage");
+  // ward: 寮(左) → 病棟(右) なので、出勤=右へスライドアウト→左から戻る
+  // home: 寮へ戻る = 左へスライドアウト→右から戻る
+  const goingToWard = (toPlace === "ward");
+  const outDir = goingToWard ? "right" : "left";
+  const inDir  = goingToWard ? "left"  : "right";
+  state.paused = true;
+  stage.classList.add("in-transit");
+  // 一時的に道のbg
+  setTimeout(() => {
+    const bg = $("stage-bg");
+    bg.dataset.key = "bg_road";
+    bg.src = ASSET.bg_road;
+    bg.classList.add("show");
+  }, 200);
+  // スライドアウト
+  nurse.classList.remove("slide-in-left","slide-in-right","slide-out-left","slide-out-right");
+  void nurse.offsetWidth;
+  nurse.classList.add("slide-out-" + outDir);
+  setTimeout(() => {
+    // 中点でplace変更
+    if (onMid) onMid();
+    nurse.classList.remove("slide-out-" + outDir);
+    void nurse.offsetWidth;
+    nurse.classList.add("slide-in-" + inDir);
+    setTimeout(() => {
+      nurse.classList.remove("slide-in-" + inDir);
+      stage.classList.remove("in-transit");
+      state.paused = false;
+      _lastTick = Date.now();
+    }, 550);
+  }, 450);
+}
+
+function showPlaceBadge() {
+  const el = $("place-badge");
+  el.textContent = "📍 " + PLACE_LABEL[state.place].replace(/^\S+\s/, "");
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+}
+
+// ===== Tick =====
+let _lastTick = 0;
+let _motivTick = 0;
+function tick() {
+  if (state.ended || state.paused) return;
+  const now = Date.now();
+  const dt = Math.min(2000, now - _lastTick);
+  _lastTick = now;
+  let dtSec = dt / 1000;
+
+  // 会話中はゲージも時間も止める (decisionも同様)
+  if (state.inConversation || state.decision) {
+    return;
+  }
+
+  // 仮眠中は時間を3倍速で進める
+  if (state.napping) dtSec *= 3;
+
+  // Day progress
+  state.daySec += dtSec;
+
+  // Decision timer tick
+  if (state.decision) {
+    const remain = state.decision.deadlineMs - now;
+    const ratio = Math.max(0, remain / 7000);
+    $("dec-timer-fill").style.width = (ratio*100) + "%";
+    if (remain <= 0) resolveDecision(state.decision.ev.timeout);
+  }
+
+  // Motiv window: which action is in valid context?
+  updateMotiv(now);
+
+  // Stat decay (per real-second)
+  // 体力: 軽め減少。家で家事/睡眠中は回復。
+  // 心: 場所と時間帯で変動
+  // 集中: 業務してないと減衰 緩
+  const h = gameHour();
+  const isNight = (h >= 22 || h < 6);
+  const hard = state.hardMode ? 1.8 : 1;
+  let dStam = -0.2 * hard; // base decay
+  let dMental = -0.15 * hard;
+  let dFocus = -0.1 * hard;
+
+  if (state.place === "ward") {
+    dStam -= 0.3 * hard;
+    dMental -= 0.2 * hard;
+  } else if (state.place === "home" && isNight) {
+    dStam += 0.6;       // 家で深夜=休んでる扱い (回復はhard影響なし)
+    dMental += 0.4;
+  } else if (state.place === "road") {
+    dStam -= 0.3 * hard;
+    dMental -= 0.15 * hard;
+  }
+
+  if (isNight && state.place !== "home") dMental -= 0.4 * hard;
+
+  state.stamina = clamp(state.stamina + dStam * dtSec);
+  state.mental  = clamp(state.mental  + dMental * dtSec);
+  state.focus   = clamp(state.focus   + dFocus * dtSec);
+
+  // Cooldowns
+  for (const k of Object.keys(state.cooldowns)) {
+    state.cooldowns[k] = Math.max(0, state.cooldowns[k] - dt);
+    if (state.cooldowns[k] === 0) delete state.cooldowns[k];
+  }
+
+  // Random ambient speech
+  if (Math.random() < 0.018 * dtSec * 60 / 60 && !$("speech").classList.contains("show")) {
+    if (Date.now() - _speechShown > 4000) {
+      const a = pick(AMBIENT);
+      showSpeech(a.spk, a.text);
+    }
+  }
+
+  // 深夜の悪夢起き (仮眠中、1-5時、12秒間隔で18%)
+  maybeNightmare(now);
+
+  // 1日1回の訪問者: 夕方17-21時、まだ未訪問の日に必ず会話発火
+  if (!state.decision && !state.napping && !_burstQueue && state.lastVisitDay !== state.day) {
+    const h = gameHour();
+    if (h >= 17 && h < 22) {
+      state.lastVisitDay = state.day;
+      // 訪問者は CONVERSATION_BURSTS から日替わりで rotate
+      const visitor = CONVERSATION_BURSTS[state.day % CONVERSATION_BURSTS.length];
+      _burstQueue = [...visitor];
+      state.inConversation = true;
+      $("frame").classList.add("in-convo");
+      sfx("conv");
+      playNextBurst();
+      return; // この tick は訪問発火だけで終了
+    }
+  }
+
+  // Random event (every 18-30s when no decision/burst active)
+  if (!state.decision && !state.napping && !_burstQueue && now >= state.nextDecisionMs) {
+    state.nextDecisionMs = now + (18 + Math.random()*12) * 1000;
+    // 60% で会話バースト, 40% で A/B 決断
+    if (Math.random() < 0.6) spawnConversation();
+    else spawnDecision();
+  }
+
+  // Day end
+  if (state.daySec >= DAY_DURATION_SEC) {
+    state.daySec = 0;
+    state.day++;
+    if (state.day >= TOTAL_DAYS) {
+      win();
+      return;
+    }
+    showDayEnd();
+    return;
+  }
+
+  checkEnd();
+  render();
+}
+
+// ===== Nightmare (仮眠中・深夜1-5時、ランダム強制覚醒) =====
+let _lastNightmareMs = 0;
+function maybeNightmare(now) {
+  if (!state.napping) return;
+  if (state.place !== "home") return;
+  if (now - _lastNightmareMs < 12000) return;
+  const h = gameHour();
+  if (h < 1 || h >= 5) return;
+  if (Math.random() > 0.18) return;
+  _lastNightmareMs = now;
+  state.napping = false;
+  state.stamina = clamp(state.stamina - 8);
+  state.mental  = clamp(state.mental  - 12);
+  state.today = state.today || { shift:0, decision:0, nightmare:0 };
+  state.today.nightmare++;
+  sfx("nightmare");
+  showSpeech("self", pick(NIGHTMARE_LINES), "dark");
+}
+
+// ===== Motiv (3-2-1 やる気の窓) =====
+function motivContext() {
+  // どのアクションがいま「やる気の窓」対象か
+  if (state.napping) return "wake";
+  const h = gameHour();
+  if (state.place === "home" && h >= 7 && h < 11) return "commute"; // 朝
+  if (state.place === "ward" && h >= SHIFT_START && h < SHIFT_END) return "shift";
+  return null;
+}
+function updateMotiv(now) {
+  const ctx = motivContext();
+  if (!ctx) {
+    if (state.motiv) state.motiv = null;
+    return;
+  }
+  if (!state.motiv || state.motiv.id !== ctx) {
+    state.motiv = { id: ctx, count: 3, missed: 0, lastMs: now };
+    return;
+  }
+  // 1秒ごとに count--、0で count=3にリセットしmissed++
+  if (now - state.motiv.lastMs >= 1000) {
+    state.motiv.lastMs = now;
+    state.motiv.count--;
+    if (state.motiv.count <= 0) {
+      state.motiv.count = 3;
+      state.motiv.missed++;
+      if (state.motiv.missed >= 3) {
+        firePenalty(ctx);
+        state.motiv = null;
+      }
+    }
+  }
+}
+function firePenalty(id) {
+  const p = MOTIV_PENALTIES[id];
+  if (!p) return;
+  sfx("miss");
+  state.stamina = clamp(state.stamina + (p.delta.stamina || 0));
+  state.mental  = clamp(state.mental  + (p.delta.mental  || 0));
+  state.focus   = clamp(state.focus   + (p.delta.focus   || 0));
+  showSpeech("self", pick(p.lines), "crit");
+  // 起きる失敗 = 強制起床+時間進行
+  if (id === "wake") {
+    state.napping = false;
+    state.daySec += 3; // 寝過ごし時間ペナルティ
+  }
+  // 出勤失敗 = 道に強制移動
+  if (id === "commute") {
+    state.place = "road";
+    showPlaceBadge();
+  }
+  checkEnd();
+  render();
+}
+
+// ===== Conversation burst (3往復、タップで進む / ゲージ停止) =====
+let _burstQueue = null;
+function spawnConversation() {
+  if (_burstQueue) return;
+  _burstQueue = [...pick(CONVERSATION_BURSTS)];
+  state.inConversation = true;
+  $("frame").classList.add("in-convo");
+  sfx("conv");
+  playNextBurst();
+}
+function playNextBurst() {
+  if (!_burstQueue || _burstQueue.length === 0) {
+    endConversation();
+    return;
+  }
+  const turn = _burstQueue.shift();
+  if (turn.delta) {
+    state.stamina = clamp(state.stamina + (turn.delta.stamina || 0));
+    state.mental  = clamp(state.mental  + (turn.delta.mental  || 0));
+    state.focus   = clamp(state.focus   + (turn.delta.focus   || 0));
+  }
+  showSpeech(turn.spk, turn.text);
+  // 自動進行はしない。タップで次へ。
+}
+function endConversation() {
+  _burstQueue = null;
+  state.inConversation = false;
+  $("frame").classList.remove("in-convo");
+  // 吹き出しを通常時間でフェード
+  setTimeout(() => $("speech").classList.remove("show"), 300);
+  render();
+  save();
+}
+
+// ===== Decision banner =====
+function spawnDecision() {
+  // Filter by current place
+  const candidates = DECISION_EVENTS.filter(e => !e.places || e.places.includes(state.place));
+  if (candidates.length === 0) return;
+  const ev = pick(candidates);
+  state.decision = { ev, deadlineMs: Date.now() + 7000 };
+  sfx("decision");
+  const banner = $("decision-banner");
+  $("decision-text").querySelector(".who").textContent = (SPEAKERS[ev.spk]||SPEAKERS.self).name;
+  $("decision-body").textContent = ev.text;
+  $("dec-a").innerHTML = `<span class="lbl">A. ${ev.a.lbl}</span><span class="preview">${deltaPreview(ev.a.delta)}</span>`;
+  $("dec-b").innerHTML = `<span class="lbl">B. ${ev.b.lbl}</span><span class="preview">${deltaPreview(ev.b.delta)}</span>`;
+  $("dec-a").onclick = () => resolveDecision("a");
+  $("dec-b").onclick = () => resolveDecision("b");
+  $("dec-timer-fill").style.width = "100%";
+  banner.classList.add("show");
+}
+function deltaPreview(d) {
+  if (!d) return "";
+  const parts = [];
+  if (d.stamina) parts.push(`<span class="${d.stamina>0?"up":"down"}">💪${d.stamina>0?"+":""}${d.stamina}</span>`);
+  if (d.mental)  parts.push(`<span class="${d.mental>0?"up":"down"}">💖${d.mental>0?"+":""}${d.mental}</span>`);
+  if (d.focus)   parts.push(`<span class="${d.focus>0?"up":"down"}">🎯${d.focus>0?"+":""}${d.focus}</span>`);
+  return parts.join(" ");
+}
+function resolveDecision(choice) {
+  if (!state.decision) return;
+  const ev = state.decision.ev;
+  const out = ev[choice];
+  state.decision = null;
+  $("decision-banner").classList.remove("show");
+  if (out.delta) {
+    state.stamina = clamp(state.stamina + (out.delta.stamina || 0));
+    state.mental  = clamp(state.mental  + (out.delta.mental  || 0));
+    state.focus   = clamp(state.focus   + (out.delta.focus   || 0));
+  }
+  state.today = state.today || { shift:0, decision:0, nightmare:0 };
+  state.today.decision++;
+  showSpeech("self", out.line);
+  checkEnd();
+  render();
+  save();
+}
+
+// ===== End conditions =====
+function checkEnd() {
+  if (state.ended) return;
+  if (state.stamina <= 0) lose("身体が動かない", "体力が尽きた。倒れた。");
+  else if (state.mental <= 0) lose("もーむり", "心が折れた。退職届に判を押した。");
+  else if (state.focus <= 0) lose("ミス", "集中が切れて、薬を取り違えた。");
+}
+
+function lose(cause, line) {
+  state.ended = true;
+  state.paused = true;
+  stopBgm();
+  sfx("miss");
+  // 心0 = mental エンディング (画像紙芝居)、それ以外はシンプルモーダル
+  if (cause === "もーむり") {
+    startSlideshow("mental", () => {
+      $("gameover-cause").textContent = cause;
+      $("gameover-line").textContent = line;
+      $("gameover-stats").innerHTML = `${WEEKDAYS[state.day]||"?"}曜 ${state.day+1}日目 ${fmtTime(gameTimeMin())} で終了`;
+      showModal("gameover-modal");
+    });
+  } else {
+    $("gameover-cause").textContent = cause;
+    $("gameover-line").textContent = line;
+    $("gameover-stats").innerHTML = `${WEEKDAYS[state.day]||"?"}曜 ${state.day+1}日目 ${fmtTime(gameTimeMin())} で終了`;
+    showModal("gameover-modal");
+  }
+  save();
+}
+function win() {
+  state.ended = true;
+  state.paused = true;
+  stopBgm();
+  sfx("win");
+  startSlideshow("clear", () => {
+    $("victory-line").textContent = pick(VICTORY_LINES);
+    $("victory-stats").innerHTML = `💪${Math.round(state.stamina)} 💖${Math.round(state.mental)} 🎯${Math.round(state.focus)}`;
+    showModal("victory-modal");
+    const bg = $("stage-bg");
+    bg.dataset.key = "bg_sat";
+    bg.src = ASSET.bg_sat;
+  });
+  save();
+}
+
+// ===== Slideshow =====
+let _ssQueue = [];
+let _ssIdx = 0;
+let _ssAfter = null;
+function startSlideshow(kind, after) {
+  const panels = SLIDESHOWS[kind] || [];
+  _ssAfter = after || null;
+  if (panels.length === 0) {
+    if (_ssAfter) _ssAfter();
+    return;
+  }
+  _ssQueue = panels;
+  _ssIdx = 0;
+  $("slideshow").classList.add("show");
+  renderSlide();
+}
+function renderSlide() {
+  const p = _ssQueue[_ssIdx];
+  if (!p) { finishSlideshow(); return; }
+  const img = $("ss-img");
+  const cap = $("ss-cap");
+  img.style.animation = "none"; void img.offsetWidth; img.style.animation = "";
+  cap.style.animation = "none"; void cap.offsetWidth; cap.style.animation = "";
+  img.src = p.src;
+  cap.textContent = p.cap;
+  $("ss-page").textContent = `${_ssIdx+1} / ${_ssQueue.length}`;
+}
+function advanceSlide() {
+  if (_ssIdx < _ssQueue.length - 1) {
+    _ssIdx++;
+    renderSlide();
+  } else {
+    finishSlideshow();
+  }
+}
+function finishSlideshow() {
+  const after = _ssAfter;
+  _ssQueue = []; _ssIdx = 0; _ssAfter = null;
+  $("slideshow").classList.remove("show");
+  if (after) after();
+}
+
+function showDayEnd() {
+  state.paused = true;
+  $("dayend-title").textContent = `${WEEKDAYS[state.day-1]}曜 終了`;
+  $("dayend-flavor").textContent = DAY_FLAVORS[state.day-1] || "…";
+  const t = state.today || { shift:0, decision:0, nightmare:0 };
+  const summary = [];
+  if (t.shift)     summary.push(`💉 業務 ${t.shift}回`);
+  if (t.decision)  summary.push(`💬 決断 ${t.decision}回`);
+  if (t.nightmare) summary.push(`🌙 悪夢 ${t.nightmare}回`);
+  const summaryHtml = summary.length
+    ? `<div style="font-size:11px;color:#ffe085;margin:4px 0">${summary.join(" / ")}</div>`
+    : "";
+  $("dayend-stats").innerHTML = summaryHtml +
+    `💪${Math.round(state.stamina)} 💖${Math.round(state.mental)} 🎯${Math.round(state.focus)}`;
+  state.today = { shift:0, decision:0, nightmare:0 };
+  showModal("dayend-modal");
+}
+
+// ===== Modals =====
+function showModal(id) {
+  document.querySelectorAll(".modal").forEach(m => m.classList.remove("show"));
+  $(id).classList.add("show");
+}
+function hideModal(id) {
+  $(id).classList.remove("show");
+}
+
+// ===== Save/load =====
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (s && typeof s === "object" && !s.ended) {
+      Object.assign(state, s);
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+// ===== Reset =====
+function newGame() {
+  state = {
+    day: 0,
+    daySec: 0,
+    place: "home",
+    stamina: 100,
+    mental: 100,
+    focus: 60,
+    cooldowns: {},
+    napping: false,
+    motiv: null,
+    decision: null,
+    inConversation: false,
+    nextDecisionMs: Date.now() + 15000,
+    today: { shift:0, decision:0, nightmare:0 },
+    lastVisitDay: -1,
+    hardMode: state.hardMode || false,
+    ended: false,
+    paused: false,
+    muteSfx: state.muteSfx || false,
+    muteBgm: state.muteBgm || false
+  };
+  _lastTick = Date.now();
+  $("decision-banner").classList.remove("show");
+  $("frame").classList.remove("in-convo");
+  render();
+  showSpeech("self", pick(MORNING_LINES));
+  showPlaceBadge();
+  save();
+}
+
+// ===== Wire up =====
+$("btn-start").addEventListener("click", () => {
+  hideModal("title-modal");
+  state.hardMode = false;
+  newGame();
+  startBgm();
+});
+$("btn-start-hard").addEventListener("click", () => {
+  hideModal("title-modal");
+  state.hardMode = true;
+  newGame();
+  startBgm();
+});
+$("btn-pause").addEventListener("click", (e) => {
+  state.paused = !state.paused;
+  e.currentTarget.textContent = state.paused ? "▶ 再開" : "⏸ ポーズ";
+  if (!state.paused) _lastTick = Date.now();
+});
+$("btn-bgm").addEventListener("click", (e) => {
+  state.muteBgm = !state.muteBgm;
+  e.currentTarget.textContent = state.muteBgm ? "🎵 OFF" : "🎵 BGM";
+  if (state.muteBgm) stopBgm(); else startBgm();
+});
+$("btn-sfx").addEventListener("click", (e) => {
+  state.muteSfx = !state.muteSfx;
+  e.currentTarget.textContent = state.muteSfx ? "🔊 OFF" : "🔊 SE";
+});
+// help-modalは残置 (ダイアログとしては存在するが起動経路なし)
+$("btn-dayend-next").addEventListener("click", () => {
+  hideModal("dayend-modal");
+  state.paused = false;
+  _lastTick = Date.now();
+  showSpeech("self", pick(MORNING_LINES));
+  showPlaceBadge();
+});
+$("btn-gameover-restart").addEventListener("click", () => {
+  hideModal("gameover-modal");
+  newGame();
+});
+$("btn-victory-close").addEventListener("click", () => {
+  hideModal("victory-modal");
+  newGame();
+});
+
+// ===== たまごっち式 うろうろ =====
+let _wanderInterval = null;
+function wanderTick() {
+  if (state.ended || state.paused) return;
+  if (state.napping || state.inConversation || state.decision) return;
+  if ($("sleep-overlay").classList.contains("show")) return;
+  const nurse = $("nurse-sprite");
+  // スライド演出中は触らない
+  if (nurse.className.indexOf("slide-") !== -1) return;
+  // 25%-75% の範囲でランダム移動
+  const x = 25 + Math.random() * 50;
+  nurse.style.left = x + "%";
+}
+function startWander() {
+  if (_wanderInterval) clearInterval(_wanderInterval);
+  _wanderInterval = setInterval(wanderTick, 4500);
+}
+
+// Slideshow click handlers
+$("slideshow").addEventListener("click", (e) => {
+  if (e.target.id === "ss-skip") { finishSlideshow(); return; }
+  advanceSlide();
+});
+
+// Conversation: tap stage to advance to next turn
+$("stage").addEventListener("click", (e) => {
+  if (state.inConversation) {
+    playNextBurst();
+  }
+});
+
+// Initial render so frame doesn't look empty under title modal
+render();
+
+// Tick loop
+setInterval(tick, TICK_MS);
+startWander();
+
+// テスト: #play / #testwin / #testlose / #testconvo / #testsleep / #testmove
+if (location.hash === "#testconvo") {
+  hideModal("title-modal");
+  newGame();
+  setTimeout(() => spawnConversation(), 300);
+} else if (location.hash === "#testsleep") {
+  hideModal("title-modal");
+  newGame();
+  setTimeout(() => doAction("sleep"), 300);
+} else if (location.hash === "#testmove") {
+  hideModal("title-modal");
+  newGame();
+  setTimeout(() => doAction("commute"), 300);
+}
+// (元のフラグ群)
+if (location.hash === "#play") {
+  hideModal("title-modal");
+  newGame();
+} else if (location.hash === "#testwin") {
+  hideModal("title-modal");
+  newGame();
+  setTimeout(() => win(), 200);
+} else if (location.hash === "#testlose") {
+  hideModal("title-modal");
+  newGame();
+  setTimeout(() => lose("もーむり", "心が折れた。退職届に判を押した。"), 200);
+}
+</script>
+</body>
+</html>

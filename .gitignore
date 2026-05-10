@@ -1,0 +1,46 @@
+# 開発時のテスト残骸
+_test_*.png
+_test_*.html
+_check.js
+_make_prompts.py
+_make_xlsx.py
+prompts_batch_*.txt
+PLAN.csv
+PLAN.xlsx
+PLAN.md
+SPEC.md
+ENDING_PROMPTS.md
+IMAGE_PROMPTS.md
+
+# 生スプライト・シート (cleaned_/nanami_/npc_ のみ使用)
+assets/nurse_idle.png
+assets/nurse_tired.png
+assets/nurse_sleep.png
+assets/ドクター.png
+assets/ナース服.png
+assets/パジャマで寝てる.png
+assets/先輩.png
+assets/友達.png
+assets/後輩.png
+assets/患者女.png
+assets/患者男.png
+assets/看護師長.png
+assets/私服.png
+
+# 中間 cleaned (シート→個別フレームに切り出し済、シート版は不要)
+assets/cleaned_nurse_idle.png
+assets/cleaned_nurse_tired.png
+assets/cleaned_nurse_sleep.png
+assets/cleaned_ドクター.png
+assets/cleaned_ナース服.png
+assets/cleaned_先輩.png
+assets/cleaned_友達.png
+assets/cleaned_後輩.png
+assets/cleaned_患者女.png
+assets/cleaned_患者男.png
+assets/cleaned_看護師長.png
+assets/cleaned_私服.png
+
+# 未使用ポートレート
+assets/portrait_head_nurse.png
+assets/portrait_nanami.png
