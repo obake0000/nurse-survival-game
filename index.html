@@ -184,6 +184,25 @@
   .care-btn.move .name{color:#ffe085}
   .care-btn .cd-tag{position:absolute;top:2px;right:4px;font-size:9px;
     color:#ff8090;letter-spacing:1px}
+  /* CD中ブラックアウト: 押せないことを明示 */
+  .care-btn.cd-locked{position:relative;cursor:not-allowed}
+  .care-btn.cd-locked::after{
+    content:attr(data-cd) "s";
+    position:absolute;inset:0;
+    background:rgba(0,0,0,0.78);
+    color:#ff8090;font-size:22px;font-weight:bold;letter-spacing:2px;
+    display:flex;align-items:center;justify-content:center;
+    text-shadow:0 0 8px #ff5060,2px 2px 0 #000;
+    pointer-events:none}
+  .care-btn.work-locked{position:relative;cursor:not-allowed}
+  .care-btn.work-locked::after{
+    content:"時間外";
+    position:absolute;inset:0;
+    background:rgba(0,0,0,0.72);
+    color:#cfc7d8;font-size:13px;letter-spacing:3px;
+    display:flex;align-items:center;justify-content:center;
+    text-shadow:1px 1px 0 #000;
+    pointer-events:none}
 
   /* Footer */
   .footer{display:flex;gap:4px;padding:2px}
@@ -617,6 +636,26 @@ const SLIDESHOWS = {
     { src:"assets/ending_mental_03.png", cap:"病院に休職届を、メールで送った。\n返事は、来た。「お大事に」のスタンプ1つ。\n3年分の自分が、スタンプ1つ分、ということが、今は、ありがたい。" }
   ]
 };
+
+// ===== 発話者の登場場所コンテキスト =====
+const SPEAKER_CONTEXT = {
+  // 病棟専用 (家には出ない)
+  patient: ["ward"], grandma: ["ward"], kid: ["ward"], ghost: ["ward"],
+  head:    ["ward"], doc: ["ward"], chief: ["ward"], senpai: ["ward"],
+  kohai:   ["ward"], cleaner: ["ward"], guard: ["ward","road"],
+  // 家・道 (病棟には出ない、LINE / アプリ系)
+  mom:     ["home","road"], oshi: ["home","road"], app: ["home","road"],
+  ex:      ["home","road"], brother: ["home","road"],
+  // どこでもOK
+  friend:  ["home","road","ward"],
+  narrator:["home","road","ward"],
+  self:    ["home","road","ward"]
+};
+function isSpeakerValidHere(spk) {
+  const ctx = SPEAKER_CONTEXT[spk];
+  if (!ctx) return true;
+  return ctx.includes(state.place);
+}
 
 // ===== Speakers (from original) =====
 const SPEAKERS = {
@@ -1279,23 +1318,26 @@ function renderActions() {
   ids.forEach(id => {
     const a = ACTIONS[id];
     const cd = state.cooldowns[id] || 0;
-    const blocked = cdBlocked(id) || workBlocked(id);
-    const reason = workBlocked(id) ? "9-21時のみ" : "";
+    const isCd = cdBlocked(id);
+    const isWorkBlock = workBlocked(id);
+    const blocked = isCd || isWorkBlock;
     const isMotiv = state.motiv && state.motiv.id === id;
     const isHint = (hintId === id) && !isMotiv;
     const btn = document.createElement("button");
     btn.className = "care-btn"
       + (a.move ? " move" : "")
       + (isMotiv ? " motiv" : "")
-      + (isHint ? " hint" : "");
+      + (isHint ? " hint" : "")
+      + (isCd ? " cd-locked" : "")
+      + (isWorkBlock ? " work-locked" : "");
+    if (isCd) btn.dataset.cd = Math.ceil(cd/1000);
     btn.disabled = blocked;
     btn.innerHTML = `
       <span class="icon">${a.icon}</span>
       <span class="text-col">
         <span class="name">${a.label}</span>
-        <span class="effects">${reason || a.effects}</span>
+        <span class="effects">${a.effects}</span>
       </span>
-      ${cd > 0 ? `<span class="cd-tag">${Math.ceil(cd/1000)}s</span>` : ""}
       ${isMotiv ? `<span class="motiv-num">${state.motiv.count}</span>` : ""}
     `;
     btn.addEventListener("click", () => doAction(id));
@@ -1587,11 +1629,14 @@ function tick() {
     if (state.cooldowns[k] === 0) delete state.cooldowns[k];
   }
 
-  // Random ambient speech (dedup)
+  // Random ambient speech (dedup + place context filter)
   if (Math.random() < 0.018 * dtSec * 60 / 60 && !$("speech").classList.contains("show")) {
     if (Date.now() - _speechShown > 4000) {
-      const a = pickUnique("ambient", AMBIENT);
-      showSpeech(a.spk, a.text);
+      const valid = AMBIENT.filter(a => isSpeakerValidHere(a.spk));
+      if (valid.length) {
+        const a = pickUnique("ambient_" + state.place, valid);
+        showSpeech(a.spk, a.text);
+      }
     }
   }
 
@@ -1604,9 +1649,16 @@ function tick() {
     if (h >= 17 && h < 22) {
       state.lastVisitDay = state.day;
       state.playedBursts = state.playedBursts || [];
-      // 未再生から優先選択、なければ何でもOK
-      let remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => !state.playedBursts.includes(i));
-      const idx = remaining.length ? pick(remaining) : (state.day % CONVERSATION_BURSTS.length);
+      // 場所フィルタ + 未再生優先
+      let remaining = CONVERSATION_BURSTS
+        .map((b,i) => i)
+        .filter(i => !state.playedBursts.includes(i))
+        .filter(i => burstValidHere(CONVERSATION_BURSTS[i]));
+      if (remaining.length === 0) {
+        remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => burstValidHere(CONVERSATION_BURSTS[i]));
+      }
+      if (remaining.length === 0) return;
+      const idx = pick(remaining);
       state.playedBursts.push(idx);
       _burstQueue = [...CONVERSATION_BURSTS[idx]];
       state.inConversation = true;
@@ -1717,15 +1769,29 @@ function firePenalty(id) {
 
 // ===== Conversation burst (3往復、タップで進む / ゲージ停止) =====
 let _burstQueue = null;
+function burstValidHere(burst) {
+  // burstの非selfスピーカーが現在の場所に合うか
+  for (const t of burst) {
+    if (t.spk !== "self" && t.spk !== "narrator") {
+      return isSpeakerValidHere(t.spk);
+    }
+  }
+  return true;
+}
 function spawnConversation() {
   if (_burstQueue) return;
   state.playedBursts = state.playedBursts || [];
-  // 未再生のbustを優先。全部再生済なら履歴クリア
-  let remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => !state.playedBursts.includes(i));
+  // 場所コンテキスト + 未再生でフィルタ
+  let remaining = CONVERSATION_BURSTS
+    .map((b,i) => i)
+    .filter(i => !state.playedBursts.includes(i))
+    .filter(i => burstValidHere(CONVERSATION_BURSTS[i]));
   if (remaining.length === 0) {
-    state.playedBursts = [];
-    remaining = CONVERSATION_BURSTS.map((b,i) => i);
+    // 未再生が無い場合は、同じ場所コンテキストの全bustからリセット
+    state.playedBursts = state.playedBursts.filter(i => !burstValidHere(CONVERSATION_BURSTS[i]));
+    remaining = CONVERSATION_BURSTS.map((b,i) => i).filter(i => burstValidHere(CONVERSATION_BURSTS[i]));
   }
+  if (remaining.length === 0) return;
   const idx = pick(remaining);
   state.playedBursts.push(idx);
   _burstQueue = [...CONVERSATION_BURSTS[idx]];
