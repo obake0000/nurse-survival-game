@@ -299,7 +299,7 @@
     box-shadow:0 0 20px #ffd06080,2px 2px 0 #000;
     max-height:42%}
   .frame.in-convo .speech .who{font-size:12px;color:#ffd060}
-  .frame.in-convo .nurse{filter:drop-shadow(0 4px 0 #0008) brightness(0.7)}
+  .frame.in-convo .nurse{filter:drop-shadow(0 4px 0 #0008) brightness(0.9)}
   /* 会話中は「会話中」インジケータをHUD近くに */
   .convo-tap{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
     background:#0d0a18;border:2px solid #ffd060;color:#ffe085;
@@ -325,12 +325,11 @@
   .slideshow.show{display:flex}
   .ss-img-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;min-height:0}
-  .ss-img{max-width:100%;max-height:100%;object-fit:contain;
-    opacity:1;transform:scale(1);
-    transition:opacity 0.5s ease, transform 0.6s ease}
-  .ss-img.fading-out{opacity:0;transform:scale(1.04)}
-  .ss-img.fading-in{animation:ssFadeIn 0.7s ease-out}
-  @keyframes ssFadeIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
+  .ss-img{max-width:100%;max-height:100%;object-fit:contain}
+  /* ブラックアウト方式: 黒overlayをfade-in→swap→fade-out で前画像を見せない */
+  .ss-blackout{position:absolute;inset:0;background:#000;opacity:0;
+    pointer-events:none;transition:opacity 0.45s ease}
+  .ss-blackout.show{opacity:1}
   .ss-cap{padding:14px 16px;background:rgba(13,10,24,0.95);
     color:#f5e9d0;font-size:14px;line-height:1.8;letter-spacing:1px;
     border-top:2px solid #c98c2a;
@@ -340,6 +339,9 @@
     min-height:120px}
   .ss-cap.fading-out{opacity:0;transform:translateY(6px)}
   .ss-cap.fading-in{animation:ssCapIn 0.7s ease-out}
+  .ss-cap.banner{text-align:center;font-size:18px;line-height:2;letter-spacing:3px;color:#ffe085;
+    background:linear-gradient(180deg,#1a1408,#0d0a18 80%);
+    border-top-color:#ffd060}
   @keyframes ssCapIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .ss-bottom{display:flex;justify-content:space-between;align-items:center;
     padding:6px 12px;background:#0d0a18;border-top:1px solid #2c2a4a;
@@ -465,7 +467,10 @@
 
   <!-- Slideshow ending -->
   <div class="slideshow" id="slideshow">
-    <div class="ss-img-wrap"><img class="ss-img" id="ss-img" src="" alt=""></div>
+    <div class="ss-img-wrap">
+      <img class="ss-img" id="ss-img" src="" alt="">
+      <div class="ss-blackout" id="ss-blackout"></div>
+    </div>
     <div class="ss-cap" id="ss-cap"></div>
     <div class="ss-bottom">
       <button id="ss-skip">SKIP &gt;&gt;</button>
@@ -593,6 +598,7 @@ const NPC_SHEETS = {
 // エンディング紙芝居 (画像+キャプション、タップで進行)
 const SLIDESHOWS = {
   clear: [
+    { src:"assets/bg_saturday.png", cap:"金曜日。\n\n一週間が、終わった。\n3年目の、4年目への、入口。\n\n月〜金、退職届を出さなかった。", isBanner:true },
     // テーマ: 看護を辞めるんじゃない。夜勤と病棟に、退職届を出す。
     { src:"assets/ending_clear_07.png", cap:"土曜、面接連絡が来る。\nスマホに通知が来た。訪問看護ステーションからだった。\n病院以外からの通知で心拍数が上がるの、3年目で初めてかもしれない。" },
     { src:"assets/ending_clear_06.png", cap:"求人票を見返す。\n「日勤のみ」「土日休みあり」\n詐欺広告みたいな単語が並んでいた。\nでも応募したのは私だ。\nどうやら私は、まだ未来に引っかかる気があるらしい。" },
@@ -645,7 +651,7 @@ const ACTIONS = {
     lines: [
       "おにぎり。塩分が今日も先に効いてくる。",
       "コンビニのおにぎり、紅鮭。3年目で味覚が、塩に寄ってきた。",
-      "昆布おにぎり、月曜の習慣。曜日で具を決めるの、3年目の知恵。",
+      "昆布おにぎり。曜日で具を決めるの、3年目の知恵。",
       "おにぎり、3口で食べた。3口で食べる訓練は、誰にもしてもらってない。",
       "おにぎり、ラップの開け方、3年目で達人。背景音は、ナースコール。",
       "コンビニのプリン、レジで「スプーンお付けしますか」「いえ家で」嘘。指で食べる。"
@@ -708,7 +714,7 @@ const ACTIONS = {
       "ナースシューズ、毎朝、私より先に出勤する。",
       "歩道のヒビを踏んだら、なぜか足が止まる日がある。",
       "出勤前にもう疲れた。3年目、慣れない。",
-      "寮を出た。月曜の朝の空気は、火曜と違う、と3年目で言える。"
+      "寮を出た。朝の空気が、肺より先に目を覚まさせる。"
     ],
     cdLines: ["駅、過ぎた"],
     effects: "→ 病棟へ"
@@ -1335,12 +1341,13 @@ function showSpeech(speakerId, text, tier) {
   el.querySelector(".who").textContent = sp.name;
   $("speech-body").textContent = text;
   el.classList.add("show");
-  // NPC立ち絵: 自分以外＆シートあれば表示、自分なら隠す
+  // NPC立ち絵: 自分以外＆シートあれば表示。会話中は自分が話してもNPCを薄く残す
   if (speakerId !== "self" && NPC_SHEETS[speakerId]) {
     showNpc(speakerId);
-  } else {
+  } else if (!state.inConversation) {
     hideNpc();
   }
+  // 会話中の "self" 発言の場合 NPC は前回スプライトのまま薄く残る (CSS で対応)
   if (_speechTimer) clearTimeout(_speechTimer);
   _speechShown = Date.now();
   const dur = Math.min(8000, 2200 + text.length * 65);
@@ -1753,10 +1760,21 @@ function endConversation() {
 
 // ===== Decision banner =====
 function spawnDecision() {
-  // Filter by current place
-  const candidates = DECISION_EVENTS.filter(e => !e.places || e.places.includes(state.place));
+  // Filter by current place AND not already played
+  state.playedDecisions = state.playedDecisions || [];
+  let candidates = DECISION_EVENTS
+    .map((e,i) => ({ e, i }))
+    .filter(o => (!o.e.places || o.e.places.includes(state.place))
+              && !state.playedDecisions.includes(o.i));
+  if (candidates.length === 0) {
+    // 全部見た → 同じ場所のものをリセット
+    state.playedDecisions = [];
+    candidates = DECISION_EVENTS.map((e,i)=>({e,i})).filter(o => !o.e.places || o.e.places.includes(state.place));
+  }
   if (candidates.length === 0) return;
-  const ev = pick(candidates);
+  const picked = pick(candidates);
+  const ev = picked.e;
+  state.playedDecisions.push(picked.i);
   state.decision = { ev, deadlineMs: Date.now() + 7000 };
   sfx("decision");
   const banner = $("decision-banner");
@@ -1854,6 +1872,7 @@ function startSlideshow(kind, after) {
   }
   _ssQueue = panels;
   _ssIdx = 0;
+  $("ss-blackout").classList.remove("show");
   $("slideshow").classList.add("show");
   renderSlide();
 }
@@ -1862,34 +1881,52 @@ function renderSlide() {
   if (!p) { finishSlideshow(); return; }
   const img = $("ss-img");
   const cap = $("ss-cap");
-  img.classList.remove("fading-out","fading-in");
-  cap.classList.remove("fading-out","fading-in");
-  void img.offsetWidth; void cap.offsetWidth;
   img.src = p.src;
   cap.textContent = p.cap;
   $("ss-page").textContent = `${_ssIdx+1} / ${_ssQueue.length}`;
-  img.classList.add("fading-in");
+  cap.classList.remove("fading-out");
+  void cap.offsetWidth;
   cap.classList.add("fading-in");
+  // banner panel は cap を中央寄せ
+  cap.classList.toggle("banner", !!p.isBanner);
 }
 let _ssAdvancing = false;
 function advanceSlide() {
   if (_ssAdvancing) return;
   _ssAdvancing = true;
-  const img = $("ss-img");
+  const blk = $("ss-blackout");
   const cap = $("ss-cap");
-  img.classList.remove("fading-in");
+  // 1. blackout を完全に立ち上げる
+  blk.classList.add("show");
   cap.classList.remove("fading-in");
-  img.classList.add("fading-out");
   cap.classList.add("fading-out");
   setTimeout(() => {
-    if (_ssIdx < _ssQueue.length - 1) {
-      _ssIdx++;
-      renderSlide();
-    } else {
+    // 2. 次パネル決定
+    const nextIdx = _ssIdx + 1;
+    if (nextIdx >= _ssQueue.length) {
       finishSlideshow();
+      _ssAdvancing = false;
+      return;
     }
-    _ssAdvancing = false;
-  }, 480);
+    _ssIdx = nextIdx;
+    const p = _ssQueue[_ssIdx];
+    // 3. 新画像を裏でプリロード
+    const preload = new Image();
+    const onReady = () => {
+      // 4. 黒幕中にswap
+      renderSlide();
+      // 5. 少し遅延してblackout解除
+      setTimeout(() => {
+        blk.classList.remove("show");
+        _ssAdvancing = false;
+      }, 80);
+    };
+    preload.onload = onReady;
+    preload.onerror = onReady;
+    preload.src = p.src;
+    // 既キャッシュ時は onload が即時発火しない場合のフォールバック
+    if (preload.complete) onReady();
+  }, 460);
 }
 function finishSlideshow() {
   const after = _ssAfter;
@@ -1960,6 +1997,7 @@ function newGame() {
     today: { shift:0, decision:0, nightmare:0 },
     lastVisitDay: -1,
     playedBursts: [],
+    playedDecisions: [],
     usedLines: {},
     hardMode: state.hardMode || false,
     ended: false,
